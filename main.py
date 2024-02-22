@@ -4,11 +4,22 @@ from flask_jwt_extended import (
 )
 from datetime import timedelta
 
+from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
 app.config['JWT_SECRET_KEY'] = 'g8backend'  #key之後要改隨機的或複雜一點的
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(minutes=1)  # access token expiration(先設1分鐘測試)
 app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(minutes=1)  # refresh token expiration(先設1分鐘測試)
+
+#connect db
+
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False #不做追蹤對象的修改(減少效能損耗)
+#連線
+app.config['SQLALCHEMY_DATABASE_URI'] = "postgresql://postgres:0000@localhost:5432/postgres"
+
+db = SQLAlchemy(app)
+
+
 jwt = JWTManager(app)
 
 class User:
@@ -46,6 +57,46 @@ def refresh():
         'access_token': create_access_token(identity=current_user)
     }
     return jsonify(reftoken), 200
+
+
+#create the table we define
+@app.route('/initdb')
+def dbtest():
+    #test if db really can run
+    if db.engine.dialect.has_table(db.engine, "user"):
+        print("資料表 'user' 存在")
+    else:
+        print("資料表 'user' 不存在")
+    db.create_all()
+    return 'Success'
+
+class User(db.Model):
+    __tablename__ = 'user'
+    uid = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(30), nullable=False)
+    password = db.Column(db.String(255), nullable=False)
+
+    def __init__(self, username, password):
+        self.username = username
+        self.password = password
+
+
+@app.route('/register')
+def register():
+    new_user = User('LZK', '110306')
+    db.session.add(new_user)
+    db.session.commit()
+
+    return 'add new user'
+
+@app.route('/deleteUser')
+def delete():
+    # Delete data
+    query = User.query.filter_by(username='LZK').first()
+    db.session.delete(query)
+    db.session.commit()
+
+    return 'delete!'
 
 
 if __name__ == '__main__':
