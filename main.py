@@ -1,6 +1,5 @@
 from flask import Flask
 from extensions import db, jwt
-from models.user import User
 from auth.auth import auth_bp
 from dotenv import load_dotenv
 
