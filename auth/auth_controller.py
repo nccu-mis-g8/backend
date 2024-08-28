@@ -12,7 +12,6 @@ import re
 import logging
 
 auth_bp = Blueprint("auth", __name__)
-
 logger = logging.getLogger(__name__)
 
 
