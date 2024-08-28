@@ -1,12 +1,12 @@
 from datetime import timedelta
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import (
-    jwt_required, 
+    jwt_required,
     create_access_token,
-    create_refresh_token, 
-    get_jwt_identity,  
+    create_refresh_token,
+    get_jwt_identity,
 )
-from models import User, RefreshToken
+from models.user import User, RefreshToken
 from sqlalchemy.exc import SQLAlchemyError
 import re
 import logging
@@ -15,6 +15,7 @@ auth_bp = Blueprint("auth", __name__)
 
 logger = logging.getLogger(__name__)
 
+
 @auth_bp.post("/register")
 def register():
     """
@@ -22,7 +23,7 @@ def register():
 
     Input:
         - JSON 格式的請求，包含 'username' 和 'password' 字段。
-    
+
     Steps:
         1. 檢查用戶名和密碼是否提供且有效。
         2. 檢查用戶名是否已被使用。
@@ -36,43 +37,43 @@ def register():
     """
     try:
         # 從請求中獲取用戶名和密碼
-        username = request.json.get('username', None)
-        password = request.json.get('password', None)
-        
+        username = request.json.get("username", None)
+        password = request.json.get("password", None)
+
         # 檢查用戶名和密碼是否存在且有效
         if not username or not password:
-            return jsonify(message='使用者名稱和密碼不可為空'), 400
+            return jsonify(message="使用者名稱和密碼不可為空"), 400
 
         # 檢查用戶名是否符合規範
         if not is_valid_username(username):
-            return jsonify(message='使用者名稱不符合規範'), 400
+            return jsonify(message="使用者名稱不符合規範"), 400
 
         # 檢查密碼強度
         if not is_strong_password(password):
-            return jsonify(message='密碼必須至少包含8個字符，並包含字母和數字'), 400
-            
+            return jsonify(message="密碼必須至少包含8個字符，並包含字母和數字"), 400
+
         # 創建新的用戶實例
         new_user = User(username, password)
 
         # 檢查用戶名是否已存在
         user = User.get_user_by_username(username)
         if user is not None:
-            return jsonify(message='此帳號已被使用'), 400
-        
+            return jsonify(message="此帳號已被使用"), 400
+
         # 保存新用戶到數據庫
         new_user.save()
 
         # 返回成功消息和新用戶資訊
-        return jsonify(message='註冊成功', username=new_user.username)
-    
+        return jsonify(message="註冊成功", username=new_user.username)
+
     except SQLAlchemyError as e:
         # 記錄資料庫錯誤並返回錯誤消息
         logger.error(f"Database error: {e}")
-        return jsonify(message='資料庫錯誤，請稍後再試'), 500
+        return jsonify(message="資料庫錯誤，請稍後再試"), 500
     except Exception as e:
         # 記錄一般錯誤並返回錯誤消息
         logger.error(f"Registration failed: {e}")
-        return jsonify(message=f'註冊失敗: {str(e)}'), 500
+        return jsonify(message=f"註冊失敗: {str(e)}"), 500
 
 
 @auth_bp.post("/login")
@@ -96,45 +97,54 @@ def login():
       - 失敗時：返回錯誤消息及相應的 HTTP 狀態碼。
     """
     try:
-        username = request.json.get('username')
-        password = request.json.get('password')
+        username = request.json.get("username")
+        password = request.json.get("password")
 
         # 檢查是否提供了用戶名和密碼
         if not username or not password:
-            return jsonify(message='使用者名稱和密碼不可為空'), 400
+            return jsonify(message="使用者名稱和密碼不可為空"), 400
 
         # 從數據庫中檢索用戶
         user = User.get_user_by_username(username)
         if user is None or not user.check_password(password):
-            return jsonify(message='帳號或密碼錯誤'), 401
-        
+            return jsonify(message="帳號或密碼錯誤"), 401
+
         RefreshToken.delete_revoked_tokens(user.id)
 
         # 成功登入時生成 token
-        access_token = create_access_token(identity=username, expires_delta=timedelta(minutes=30))
-        refresh_token = create_refresh_token(identity=username, expires_delta=timedelta(days=7))
-        
+        access_token = create_access_token(
+            identity=username, expires_delta=timedelta(minutes=30)
+        )
+        refresh_token = create_refresh_token(
+            identity=username, expires_delta=timedelta(days=7)
+        )
+
         new_refresh_token = RefreshToken(
             user_id=user.id,  # Use the user ID from the User model
             token=refresh_token,
         )
-        
+
         new_refresh_token.save()
 
-        return jsonify(message='登入成功', access_token=access_token, refresh_token=refresh_token), 200
+        return (
+            jsonify(
+                message="登入成功", access_token=access_token, refresh_token=refresh_token
+            ),
+            200,
+        )
 
     except SQLAlchemyError as e:
         # 處理與數據庫相關的錯誤
         logger.error(f"資料庫錯誤: {str(e)}")
-        return jsonify(message='資料庫錯誤，請稍後再試'), 500
+        return jsonify(message="資料庫錯誤，請稍後再試"), 500
 
     except Exception as e:
         # 處理其他潛在的異常
         logger.error(f"登入過程中出現錯誤: {str(e)}")
-        return jsonify(message=f'登入失敗: {str(e)}'), 500
+        return jsonify(message=f"登入失敗: {str(e)}"), 500
 
 
-@auth_bp.post('/refresh')
+@auth_bp.post("/refresh")
 @jwt_required(refresh=True)
 def refresh():
     """
@@ -158,14 +168,14 @@ def refresh():
         # jti = get_jwt()["jti"]
         # print(jti)
         # 从请求中获取 Refresh Token
-        refresh_token = request.headers.get('Authorization').split(" ")[1]
-        
+        refresh_token = request.headers.get("Authorization").split(" ")[1]
+
         # 從資料庫查找這個 Refresh Token
         stored_token = RefreshToken.find_by_token_and_user(refresh_token, user.id)
-        
+
         if not stored_token or stored_token.revoked:
-            return jsonify(message='Refresh Token 已失效或已撤銷'), 401
-        
+            return jsonify(message="Refresh Token 已失效或已撤銷"), 401
+
         # 為當前使用者生成新的 Access Token
         new_access_token = create_access_token(identity=current_user)
 
@@ -175,10 +185,10 @@ def refresh():
     except Exception as e:
         # 處理可能發生的異常，並記錄錯誤信息
         logger.error(f"刷新 Access Token 過程錯誤: {str(e)}")
-        return jsonify(message=f'刷新 Access Token 失敗: {str(e)}'), 500
+        return jsonify(message=f"刷新 Access Token 失敗: {str(e)}"), 500
 
 
-@auth_bp.post('/logout')
+@auth_bp.post("/logout")
 @jwt_required()
 def logout():
     """
@@ -200,21 +210,21 @@ def logout():
         # 獲取當前用戶的身份
         current_user = get_jwt_identity()
         user = User.get_user_by_username(current_user)
-        
+
         # 從資料庫查找對應的 Refresh Token
         stored_token = RefreshToken.find_by_userId(user.id)
 
         if stored_token and not stored_token.revoked:
             stored_token.revoke()
 
-        return jsonify(message='登出成功'), 200
-    
+        return jsonify(message="登出成功"), 200
+
     except Exception as e:
         logger.error(f"登出過程錯誤: {str(e)}")
-        return jsonify(message=f'登出失敗: {str(e)}'), 500
+        return jsonify(message=f"登出失敗: {str(e)}"), 500
 
 
-@auth_bp.post('/delete')
+@auth_bp.post("/delete")
 @jwt_required()
 def delete():
     """
@@ -240,18 +250,18 @@ def delete():
                 # 刪除用戶並提交變更
                 User.delete(user_to_delete)
                 logger.info(f"用戶 {current_user} 帳號刪除成功")
-                return jsonify(message='帳號刪除成功'), 200
+                return jsonify(message="帳號刪除成功"), 200
             except Exception as e:
                 logger.error(f"刪除用戶 {current_user} 帳號時發生錯誤: {str(e)}")
-                return jsonify(message=f'帳號刪除失敗: {str(e)}'), 500
+                return jsonify(message=f"帳號刪除失敗: {str(e)}"), 500
         else:
             logger.warning(f"用戶 {current_user} 帳號刪除失敗：帳號不存在")
-            return jsonify(message='找不到要刪除的帳號'), 404
+            return jsonify(message="找不到要刪除的帳號"), 404
     except Exception as e:
         logger.error(f"處理帳號刪除請求時發生錯誤: {str(e)}")
-        return jsonify(message=f'帳號刪除失敗: {str(e)}'), 500
-    
-    
+        return jsonify(message=f"帳號刪除失敗: {str(e)}"), 500
+
+
 def is_valid_username(username):
     """
     驗證用戶名是否合法。
@@ -264,7 +274,7 @@ def is_valid_username(username):
     Returns:
     - bool: 如果用戶名合法，返回 True；否則返回 False。
     """
-    return re.match(r'^[a-zA-Z0-9_.-]+$', username)
+    return re.match(r"^[a-zA-Z0-9_.-]+$", username)
 
 
 def is_strong_password(password):
@@ -279,4 +289,8 @@ def is_strong_password(password):
     Returns:
     - bool: 如果密碼符合要求，返回 True；否則返回 False。
     """
-    return len(password) >= 8 and re.search(r"[A-Za-z]", password) and re.search(r"[0-9]", password)
+    return (
+        len(password) >= 8
+        and re.search(r"[A-Za-z]", password)
+        and re.search(r"[0-9]", password)
+    )

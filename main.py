@@ -1,16 +1,16 @@
 from flask import Flask
 from extensions import db, jwt
-from models import User
-from auth import auth_bp
+from models.user import User
+from auth.auth import auth_bp
 from dotenv import load_dotenv
 
 load_dotenv()
 
 app = Flask(__name__)
 app.config.from_prefixed_env()
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False 
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-#initialize 
+# initialize
 db.init_app(app)
 jwt.init_app(app)
 
@@ -22,7 +22,6 @@ app.register_blueprint(auth_bp, url_prefix="/auth")
 # @app.before_request
 # def create_tables():
 #     db.create_all()
-    
-if __name__ == '__main__':
-    app.run(debug=True)
 
+if __name__ == "__main__":
+    app.run(debug=True)

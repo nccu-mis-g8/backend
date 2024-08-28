@@ -1,8 +1,9 @@
 from extensions import db
 from werkzeug.security import generate_password_hash, check_password_hash
 
+
 class User(db.Model):
-    __tablename__ = 'user'
+    __tablename__ = "user"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     username = db.Column(db.String(50), nullable=False)
     password = db.Column(db.String(255), nullable=False)
@@ -10,7 +11,7 @@ class User(db.Model):
     def __init__(self, username, password):
         self.username = username
         self.password = generate_password_hash(password)
-        
+
     def check_password(self, password):
         """
         驗證輸入的密碼是否與存儲的哈希密碼相符。
@@ -22,7 +23,7 @@ class User(db.Model):
         - bool: 如果密碼相符，返回 True，否則返回 False。
         """
         return check_password_hash(self.password, password)
-    
+
     @classmethod
     def get_user_by_username(cls, username):
         """
@@ -35,7 +36,7 @@ class User(db.Model):
         - User 實例，如果找到；否則返回 None。
         """
         return cls.query.filter_by(username=username).first()
-    
+
     def save(self):
         """
         將當前 User 實例保存到資料庫中。
@@ -52,10 +53,10 @@ class User(db.Model):
 
 
 class RefreshToken(db.Model):
-    __tablename__ = 'refreshTokens'
+    __tablename__ = "refreshTokens"
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     token = db.Column(db.Text, nullable=False)
     revoked = db.Column(db.Boolean, default=False)
 
@@ -72,7 +73,7 @@ class RefreshToken(db.Model):
         """
         self.revoked = True
         db.session.commit()
-        
+
     @classmethod
     def find_by_token_and_user(cls, token, user_id):
         """
@@ -86,7 +87,7 @@ class RefreshToken(db.Model):
         - RefreshToken 實例，如果找到；否則返回 None。
         """
         return cls.query.filter_by(token=token, user_id=user_id).first()
-    
+
     @classmethod
     def delete_revoked_tokens(cls, user_id):
         """
@@ -100,7 +101,7 @@ class RefreshToken(db.Model):
         """
         cls.query.filter_by(user_id=user_id, revoked=True).delete()
         db.session.commit()
-        
+
     @classmethod
     def find_by_userId(cls, user_id):
         """
