@@ -1,13 +1,12 @@
-from flask import Blueprint, request, Response
-import logging
+from flask import Flask, request, jsonify, Response
 import json
 from transformers import AutoTokenizer
 import transformers
 import torch
 
 
-train_model_bp = Blueprint("train_model", __name__)
-logger = logging.getLogger(__name__)
+app = Flask(__name__)
+app.config['JSON_AS_ASCII'] = False
 
 model = "./my-autotrain-llm"
 tokenizer = AutoTokenizer.from_pretrained(model)
@@ -18,12 +17,7 @@ pipeline = transformers.pipeline(
     framework="pt"
 )
 
-
-@train_model_bp.post("/training_file")
-def upload_training_file():
-    pass
-
-@train_model_bp.post('/chat')
+@app.route('/chat', methods=['POST'])
 def chat():
     
     input_text = request.json.get('input_text', '')  
@@ -51,3 +45,7 @@ def chat():
 
         response = json.dumps({"response": result}, ensure_ascii=False)
         return Response(response, content_type="application/json; charset=utf-8")
+    
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)

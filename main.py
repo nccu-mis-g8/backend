@@ -2,6 +2,7 @@ from flask import Flask
 from extensions import db, jwt
 from auth.auth_controller import auth_bp
 from dotenv import load_dotenv
+from train_model.train_model_controller import train_model_bp
 
 load_dotenv()
 
@@ -15,7 +16,7 @@ jwt.init_app(app)
 
 # register blueprint
 app.register_blueprint(auth_bp, url_prefix="/auth")
-
+app.register_blueprint(train_model_bp, url_prefix="/finetune")
 
 # define table
 # @app.before_request
