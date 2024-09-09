@@ -19,13 +19,13 @@ pipeline = transformers.pipeline(
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    
+       
     input_text = request.json.get('input_text', '')  
-    instruction = "請用朋友語氣回答："  
+    instruction = "請用朋友語氣跟我聊天："  
 
-    full_input = f"{instruction}{input_text}"
+    full_input = [{"role":"user","content":f"{instruction} {input_text}"}]
 
-    sequences = pipeline(
+    sequences = generator(
         full_input,
         do_sample=True, 
         top_p=0.9, 
@@ -36,15 +36,9 @@ def chat():
         truncation=True,
     )
     
-    for seq in sequences:
-        generated_text = seq['generated_text']
-        
-        print(f"Generated Text: {generated_text}")
-
-        result = generated_text.replace(instruction, "").replace(input_text, "").strip()
-
-        response = json.dumps({"response": result}, ensure_ascii=False)
-        return Response(response, content_type="application/json; charset=utf-8")
+    generated_text = sequences[0]['generated_text'] if isinstance(sequences[0], dict) else sequences[0]
+    response = json.dumps({"response": generated_text}, ensure_ascii=False)
+    return Response(response, content_type="application/json; charset=utf-8")
     
 
 if __name__ == '__main__':
