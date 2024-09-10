@@ -1,13 +1,31 @@
-from flask import Blueprint, request, Response
+from flask import Blueprint, request, Response,jsonify
 import logging
 import json
 from transformers import AutoTokenizer
 import transformers
 import torch
-
+from finetune import train
 
 train_model_bp = Blueprint("train_model", __name__)
 logger = logging.getLogger(__name__)
+
+default_config = {
+        "project_name": 'my-autotrain-llm',
+        "model_name": './saved-taide-model',
+        "data_path": '.',
+        "lr": 2e-4,
+        "epochs": 4,
+        "batch_size": 1,
+        "block_size": 1024,
+        "trainer": "sft",
+        "warmup_ratio": 0.1,
+        "weight_decay": 0.01,
+        "gradient_accumulation": 4,
+        "peft": True,
+        "lora_r": 16,
+        "lora_alpha": 32,
+        "lora_dropout": 0.045,
+}
 
 model = "./my-autotrain-llm"
 tokenizer = AutoTokenizer.from_pretrained(model)
@@ -22,6 +40,21 @@ generator = transformers.pipeline(
 @train_model_bp.post("/training_file")
 def upload_training_file():
     pass
+
+@train_model_bp.post('/train_model')
+def train_model():
+    try:
+        custom_config = request.json
+        if not custom_config:
+            custom_config = default_config
+        
+        train_config = {**default_config, **custom_config}
+
+        finetune.train(train_config)
+        return jsonify({"status": "Training started successfully", "config": train_config}),200
+    except Exception as e:
+        return jsonify({"status": "Error", "message": str(e)}),500
+
 
 @train_model_bp.post('/chat')
 def chat():
