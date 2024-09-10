@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 model = "./my-autotrain-llm"
 tokenizer = AutoTokenizer.from_pretrained(model)
-pipeline = transformers.pipeline(
+generator = transformers.pipeline(
     "text-generation",
     model=model,
     torch_dtype=torch.float16,
@@ -27,11 +27,11 @@ def upload_training_file():
 def chat():
     
     input_text = request.json.get('input_text', '')  
-    instruction = "請用朋友語氣回答："  
+    instruction = "請用朋友語氣回答我："  
 
-    full_input = f"{instruction}{input_text}"
+    full_input = [{"role": "user", "content": f"{instruction} {input_text}"}]
 
-    sequences = pipeline(
+    sequences = generator(
         full_input,
         do_sample=True, 
         top_p=0.9, 
@@ -41,13 +41,12 @@ def chat():
         max_length=50,
         truncation=True,
     )
+
+    generated_text = ""
+    for message in sequences[0]["generated_text"]:
+        if message["role"] == "assistant":
+            generated_text = message["content"]
+            break
     
-    for seq in sequences:
-        generated_text = seq['generated_text']
-        
-        print(f"Generated Text: {generated_text}")
-
-        result = generated_text.replace(instruction, "").replace(input_text, "").strip()
-
-        response = json.dumps({"response": result}, ensure_ascii=False)
-        return Response(response, content_type="application/json; charset=utf-8")
+    response = json.dumps({"response": generated_text}, ensure_ascii=False)
+    return Response(response, content_type="application/json; charset=utf-8")
