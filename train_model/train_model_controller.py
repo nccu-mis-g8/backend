@@ -1,4 +1,4 @@
-from flask import Blueprint, request, Response,jsonify
+from flask import Blueprint, request, Response, jsonify
 import logging
 import json
 from transformers import AutoTokenizer
@@ -10,30 +10,27 @@ train_model_bp = Blueprint("train_model", __name__)
 logger = logging.getLogger(__name__)
 
 default_config = {
-        "project_name": 'my-autotrain-llm',
-        "model_name": './saved-taide-model',
-        "data_path": '.',
-        "lr": 2e-4,
-        "epochs": 4,
-        "batch_size": 1,
-        "block_size": 1024,
-        "trainer": "sft",
-        "warmup_ratio": 0.1,
-        "weight_decay": 0.01,
-        "gradient_accumulation": 4,
-        "peft": True,
-        "lora_r": 16,
-        "lora_alpha": 32,
-        "lora_dropout": 0.045,
+    "project_name": "my-autotrain-llm",
+    "model_name": "./saved-taide-model",
+    "data_path": ".",
+    "lr": 2e-4,
+    "epochs": 4,
+    "batch_size": 1,
+    "block_size": 1024,
+    "trainer": "sft",
+    "warmup_ratio": 0.1,
+    "weight_decay": 0.01,
+    "gradient_accumulation": 4,
+    "peft": True,
+    "lora_r": 16,
+    "lora_alpha": 32,
+    "lora_dropout": 0.045,
 }
 
 model = "./my-autotrain-llm"
 tokenizer = AutoTokenizer.from_pretrained(model)
 generator = transformers.pipeline(
-    "text-generation",
-    model=model,
-    torch_dtype=torch.float16,
-    framework="pt"
+    "text-generation", model=model, torch_dtype=torch.float16, framework="pt"
 )
 
 
@@ -41,33 +38,38 @@ generator = transformers.pipeline(
 def upload_training_file():
     pass
 
-@train_model_bp.post('/train_model')
+
+@train_model_bp.post("/train_model")
 def train_model():
     try:
         custom_config = request.json
         if not custom_config:
             custom_config = default_config
-        
+
         train_config = {**default_config, **custom_config}
 
-        finetune.train(train_config)
-        return jsonify({"status": "Training started successfully", "config": train_config}),200
+        train(train_config)
+        return (
+            jsonify(
+                {"status": "Training started successfully", "config": train_config}
+            ),
+            200,
+        )
     except Exception as e:
-        return jsonify({"status": "Error", "message": str(e)}),500
+        return jsonify({"status": "Error", "message": str(e)}), 500
 
 
-@train_model_bp.post('/chat')
+@train_model_bp.post("/chat")
 def chat():
-    
-    input_text = request.json.get('input_text', '')  
-    instruction = "請用朋友語氣回答我："  
+    input_text = request.json.get("input_text", "")
+    instruction = "請用朋友語氣回答我："
 
     full_input = [{"role": "user", "content": f"{instruction} {input_text}"}]
 
     sequences = generator(
         full_input,
-        do_sample=True, 
-        top_p=0.9, 
+        do_sample=True,
+        top_p=0.9,
         temperature=0.7,
         num_return_sequences=1,
         eos_token_id=tokenizer.eos_token_id,
@@ -80,6 +82,6 @@ def chat():
         if message["role"] == "assistant":
             generated_text = message["content"]
             break
-    
+
     response = json.dumps({"response": generated_text}, ensure_ascii=False)
     return Response(response, content_type="application/json; charset=utf-8")
