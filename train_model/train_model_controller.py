@@ -4,7 +4,7 @@ import json
 from transformers import AutoTokenizer
 import transformers
 import torch
-from finetune import train
+from train_model.finetune import train
 
 train_model_bp = Blueprint("train_model", __name__)
 logger = logging.getLogger(__name__)
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 default_config = {
     "project_name": "my-autotrain-llm",
     "model_name": "./saved-taide-model",
-    "data_path": ".",
+    "data_path": "./train_model",
     "lr": 2e-4,
     "epochs": 4,
     "batch_size": 1,
@@ -25,6 +25,7 @@ default_config = {
     "lora_r": 16,
     "lora_alpha": 32,
     "lora_dropout": 0.045,
+    "dataset_name":"train.csv"
 }
 
 model = "./my-autotrain-llm"
@@ -62,9 +63,9 @@ def train_model():
 @train_model_bp.post("/chat")
 def chat():
     input_text = request.json.get("input_text", "")
-    instruction = "請用朋友語氣回答我："
+    instruction = "請你以和過去回答相同的語氣回答問題，注意你回答的內容要符合對方的問題。"
 
-    full_input = [{"role": "user", "content": f"{instruction} {input_text}"}]
+    full_input = [{"role": "system", "content": instruction},{"role": "user", "content": f"{input_text}"}]
 
     sequences = generator(
         full_input,
@@ -73,7 +74,7 @@ def chat():
         temperature=0.7,
         num_return_sequences=1,
         eos_token_id=tokenizer.eos_token_id,
-        max_length=50,
+        max_length=70,
         truncation=True,
     )
 
