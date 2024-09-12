@@ -4,7 +4,6 @@ from auth.auth_controller import auth_bp
 from dotenv import load_dotenv
 from flask_swagger_ui import get_swaggerui_blueprint
 from flasgger import Swagger
-# from flask_restx import Api
 from train_model.train_model_controller import train_model_bp
 
 load_dotenv()
@@ -49,6 +48,8 @@ swaggerui_blueprint = get_swaggerui_blueprint(
 app.register_blueprint(auth_bp, url_prefix="/auth")
 app.register_blueprint(train_model_bp, url_prefix="/finetune")
 
+# Register Swagger UI blueprint
+app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
 
 # define table
 # @app.before_request
