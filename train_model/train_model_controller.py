@@ -3,8 +3,13 @@ import logging
 import json
 from transformers import AutoTokenizer
 import transformers
+import traceback
+import time
 import torch
 from train_model.finetune import train
+from concurrent.futures import TimeoutError
+from requests.exceptions import RequestException
+
 
 train_model_bp = Blueprint("train_model", __name__)
 logger = logging.getLogger(__name__)
@@ -25,7 +30,7 @@ default_config = {
     "lora_r": 16,
     "lora_alpha": 32,
     "lora_dropout": 0.045,
-    "dataset_name":"train.csv"
+    "dataset_name": "train.csv" 
 }
 
 model = "./my-autotrain-llm"
@@ -62,27 +67,42 @@ def train_model():
 
 @train_model_bp.post("/chat")
 def chat():
-    input_text = request.json.get("input_text", "")
-    instruction = "請你以和過去回答相同的語氣回答問題，注意你回答的內容要符合對方的問題。"
+    try:
+        input_text = request.json.get("input_text", "")
+        if not input_text:
+            return jsonify({"error": "Input text is required"}), 400
+        instruction = "你是我的朋友，請你以和過去回答相同的語氣與我聊天，注意回答的內容要符合問題。"
+        full_input = [{"role": "system", "content": instruction},{"role": "user", "content": input_text}]
+    
+        start_time = time.time()
+        sequences = generator(
+            full_input,
+            do_sample=True,
+            top_p=0.9,
+            temperature=0.7,
+            num_return_sequences=1,
+            eos_token_id=tokenizer.eos_token_id,
+            # max_new_tokens=50,
+            max_length=70,
+            # truncation=True,
+        )
 
-    full_input = [{"role": "system", "content": instruction},{"role": "user", "content": f"{input_text}"}]
+        # 之後會改小
+        if time.time() - start_time > 3000:
+            return jsonify({"error": "Request timeout, please try again"}), 504
 
-    sequences = generator(
-        full_input,
-        do_sample=True,
-        top_p=0.9,
-        temperature=0.7,
-        num_return_sequences=1,
-        eos_token_id=tokenizer.eos_token_id,
-        max_length=70,
-        truncation=True,
-    )
+        generated_text = ""
+        for message in sequences[0]["generated_text"]:
+            if message["role"] == "assistant":
+                generated_text = message["content"]
+                break
 
-    generated_text = ""
-    for message in sequences[0]["generated_text"]:
-        if message["role"] == "assistant":
-            generated_text = message["content"]
-            break
+        response = json.dumps({"response": generated_text}, ensure_ascii=False)
+        return Response(response, content_type="application/json; charset=utf-8")
+    
+    except (RequestException, TimeoutError) as e:
+        return jsonify({"error": "Error in generating response, please try again"}), 500
 
-    response = json.dumps({"response": generated_text}, ensure_ascii=False)
-    return Response(response, content_type="application/json; charset=utf-8")
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
