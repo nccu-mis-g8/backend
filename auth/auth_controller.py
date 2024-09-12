@@ -1,4 +1,5 @@
 from datetime import timedelta
+from flasgger import swag_from
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import (
     jwt_required,
@@ -16,9 +17,10 @@ logger = logging.getLogger(__name__)
 
 
 @auth_bp.post("/register")
-def register():
-    """
-    用戶註冊
+@swag_from({
+    'tags': ['Authentication'],
+    'description': """
+    此API用來處理用戶註冊，會檢查用戶名、密碼是否有效，並將新用戶保存至資料庫。
 
     Input:
         - JSON 格式的請求，包含 'username' 和 'password' 字段。
@@ -33,7 +35,74 @@ def register():
         - JSON 格式的回應消息:
             - 註冊成功: 包含成功消息和新用戶的一些基本資訊。
             - 註冊失敗: 包含錯誤消息和相應的 HTTP status code。
-    """
+    """,
+    'parameters': [
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'username': {
+                        'type': 'string',
+                        'description': '用戶名',
+                        'example': 'john_doe'
+                    },
+                    'password': {
+                        'type': 'string',
+                        'description': '密碼，必須至少8個字符，並包含字母和數字',
+                        'example': 'Password123'
+                    }
+                },
+                'required': ['username', 'password']
+            }
+        }
+    ],
+    'responses': {
+        200: {
+            'description': '註冊成功',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'message': {
+                        'type': 'string',
+                        'example': '註冊成功'
+                    },
+                    'username': {
+                        'type': 'string',
+                        'example': 'john_doe'
+                    }
+                }
+            }
+        },
+        400: {
+            'description': '註冊失敗，輸入無效或用戶名已存在',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'message': {
+                        'type': 'string',
+                        'example': '此帳號已被使用'
+                    }
+                }
+            }
+        },
+        500: {
+            'description': '伺服器錯誤，可能是資料庫異常',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'message': {
+                        'type': 'string',
+                        'example': '資料庫錯誤，請稍後再試'
+                    }
+                }
+            }
+        }
+    }
+})
+def register():
     try:
         # 從請求中獲取用戶名和密碼
         username = request.json.get("username", None)
@@ -76,9 +145,10 @@ def register():
 
 
 @auth_bp.post("/login")
-def login():
-    """
-    用戶登入
+@swag_from({
+    'tags': ['Authentication'],
+    'description': """
+    此API用來處理用戶登入，會驗證用戶名和密碼，並返回 access token 和 refresh token。
 
     Input:
     - 期望接收到包含 'username' 和 'password' 字段的 JSON 請求。
@@ -94,7 +164,90 @@ def login():
     - JSON 回應訊息：
       - 成功時：返回成功消息、access token 和 refresh token。
       - 失敗時：返回錯誤消息及相應的 HTTP 狀態碼。
-    """
+    """,
+    'parameters': [
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'username': {
+                        'type': 'string',
+                        'description': '用戶名',
+                        'example': 'john_doe'
+                    },
+                    'password': {
+                        'type': 'string',
+                        'description': '用戶密碼',
+                        'example': 'Password123'
+                    }
+                },
+                'required': ['username', 'password']
+            }
+        }
+    ],
+    'responses': {
+        200: {
+            'description': '登入成功',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'message': {
+                        'type': 'string',
+                        'example': '登入成功'
+                    },
+                    'access_token': {
+                        'type': 'string',
+                        'example': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+                    },
+                    'refresh_token': {
+                        'type': 'string',
+                        'example': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+                    }
+                }
+            }
+        },
+        400: {
+            'description': '請求中缺少用戶名或密碼',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'message': {
+                        'type': 'string',
+                        'example': '使用者名稱和密碼不可為空'
+                    }
+                }
+            }
+        },
+        401: {
+            'description': '帳號或密碼錯誤',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'message': {
+                        'type': 'string',
+                        'example': '帳號或密碼錯誤'
+                    }
+                }
+            }
+        },
+        500: {
+            'description': '伺服器內部錯誤',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'message': {
+                        'type': 'string',
+                        'example': '資料庫錯誤，請稍後再試'
+                    }
+                }
+            }
+        }
+    }
+})
+def login():
     try:
         username = request.json.get("username")
         password = request.json.get("password")
@@ -145,9 +298,10 @@ def login():
 
 @auth_bp.post("/refresh")
 @jwt_required(refresh=True)
-def refresh():
-    """
-    使用 Refresh Token 刷新 Access Token。
+@swag_from({
+    'tags': ['Authentication'],
+    'description': """
+    此 API 用於使用已驗證的 Refresh Token 來生成新的 Access Token。
 
     Steps:
     1. 使用裝飾器 `@jwt_required(refresh=True)` 驗證請求中的 Refresh Token。
@@ -159,7 +313,63 @@ def refresh():
     - JSON 回應訊息：
       - 成功時：返回新的 Access Token。
       - 失敗時：由 `@jwt_required` 裝飾器自動處理，通常會返回 401 或 422 錯誤。
-    """
+    """,
+    'parameters': [
+        {
+            'name': 'Authorization',
+            'in': 'header',
+            'type': 'string',
+            'required': True,
+            'description': 'Bearer Token，使用者的 Refresh Token，格式為 "Bearer <token>"',
+            'example': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': '成功刷新 Access Token',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'access_token': {
+                        'type': 'string',
+                        'description': '新的 Access Token',
+                        'example': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+                    }
+                }
+            }
+        },
+        401: {
+            'description': 'Refresh Token 無效或已撤銷',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'message': {
+                        'type': 'string',
+                        'example': 'Refresh Token 已失效或已撤銷'
+                    }
+                }
+            }
+        },
+        500: {
+            'description': '伺服器內部錯誤',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'message': {
+                        'type': 'string',
+                        'example': '刷新 Access Token 失敗: 詳細錯誤信息'
+                    }
+                }
+            }
+        }
+    },
+    'security': [
+        {
+            'Bearer': []
+        }
+    ]
+})
+def refresh():
     try:
         # 獲取當前使用者身份
         current_user = get_jwt_identity()
@@ -189,9 +399,10 @@ def refresh():
 
 @auth_bp.post("/logout")
 @jwt_required()
-def logout():
-    """
-    登出並且撤銷當前的 refresh token。
+@swag_from({
+    'tags': ['Authentication'],
+    'description': """
+    此 API 用於當用戶登出時，撤銷與用戶關聯的 Refresh Token 並返回登出成功的訊息。
 
     Steps:
     1. 獲取當前使用者的身份。
@@ -204,7 +415,50 @@ def logout():
     - JSON 回應訊息：
       - 成功時：返回登出成功的消息。
       - 失敗時：返回錯誤消息及相應的 HTTP 狀態碼。
-    """
+    """,
+    'parameters': [
+        {
+            'name': 'Authorization',
+            'in': 'header',
+            'type': 'string',
+            'required': True,
+            'description': 'Bearer Token，使用者的 Access Token，格式為 "Bearer <token>"',
+            'example': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': '成功登出並撤銷 Refresh Token',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'message': {
+                        'type': 'string',
+                        'example': '登出成功'
+                    }
+                }
+            }
+        },
+        500: {
+            'description': '伺服器內部錯誤',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'message': {
+                        'type': 'string',
+                        'example': '登出失敗: 詳細錯誤信息'
+                    }
+                }
+            }
+        }
+    },
+    'security': [
+        {
+            'Bearer': []
+        }
+    ]
+})
+def logout():
     try:
         # 獲取當前用戶的身份
         current_user = get_jwt_identity()
@@ -225,9 +479,10 @@ def logout():
 
 @auth_bp.post("/delete")
 @jwt_required()
-def delete():
-    """
-    刪除目前登入用戶的帳號。
+@swag_from({
+    'tags': ['Authentication'],
+    'description': """
+    此 API 用於刪除當前登入用戶的帳號，並返回相應的訊息。
 
     Steps:
     1. 驗證請求中的 Access Token，確保用戶已登入。
@@ -239,7 +494,56 @@ def delete():
     - JSON 回應訊息：
       - 成功時：返回 "帳號刪除成功" 訊息和 HTTP 200 狀態碼。
       - 失敗時：返回錯誤訊息和相應的 HTTP 狀態碼。
-    """
+    """,
+    'parameters': [
+        {
+            'name': 'Authorization',
+            'in': 'header',
+            'type': 'string',
+            'required': True,
+            'description': 'Bearer Token，使用者的 Access Token，格式為 "Bearer <token>"',
+            'example': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': '帳號刪除成功',
+            'content': {
+                'application/json': {
+                    'example': {
+                        'message': '帳號刪除成功'
+                    }
+                }
+            }
+        },
+        404: {
+            'description': '找不到要刪除的帳號',
+            'content': {
+                'application/json': {
+                    'example': {
+                        'message': '找不到要刪除的帳號'
+                    }
+                }
+            }
+        },
+        500: {
+            'description': '伺服器錯誤，帳號刪除失敗',
+            'content': {
+                'application/json': {
+                    'example': {
+                        'message': '帳號刪除失敗: 具體錯誤信息'
+                    }
+                }
+            }
+        }
+    },
+    'security': [
+        {
+            'Bearer': []
+        }
+    ],
+})
+def delete():
     current_user = get_jwt_identity()
 
     try:
