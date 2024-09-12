@@ -7,7 +7,6 @@ from flasgger import Swagger
 # from flask_restx import Api
 from train_model.train_model_controller import train_model_bp
 
-
 load_dotenv()
 
 app = Flask(__name__)
@@ -46,8 +45,9 @@ swaggerui_blueprint = get_swaggerui_blueprint(
     config={'app_name': "Local Test API"}
 )
 
-# register auth blueprint
+# register blueprint
 app.register_blueprint(auth_bp, url_prefix="/auth")
+app.register_blueprint(train_model_bp, url_prefix="/finetune")
 
 
 # define table
