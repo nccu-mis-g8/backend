@@ -1,4 +1,3 @@
-import paramiko
 import pysftp
 
 class SFTPClient:
