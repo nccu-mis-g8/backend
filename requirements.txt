@@ -9,3 +9,5 @@ PyJWT==2.8.0
 SQLAlchemy==2.0.27
 Werkzeug==3.0.2
 autotrain-advanced==0.8.17
+pysftp==0.2.9
+
