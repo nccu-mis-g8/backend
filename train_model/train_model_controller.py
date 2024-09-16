@@ -1,4 +1,5 @@
 from flask import Blueprint, request, Response, jsonify
+from flasgger import Swagger, swag_from
 import logging
 import json
 from transformers import AutoTokenizer
@@ -19,17 +20,9 @@ default_config = {
     "model_name": "./saved-taide-model",
     "data_path": "./train_model",
     "lr": 2e-4,
-    "epochs": 4,
-    "batch_size": 1,
-    "block_size": 1024,
+    "epochs": 3,
+    "batch_size": 12,
     "trainer": "sft",
-    "warmup_ratio": 0.1,
-    "weight_decay": 0.01,
-    "gradient_accumulation": 4,
-    "peft": True,
-    "lora_r": 16,
-    "lora_alpha": 32,
-    "lora_dropout": 0.045,
     "dataset_name": "train.csv" 
 }
 
@@ -46,6 +39,61 @@ def upload_training_file():
 
 
 @train_model_bp.post("/train_model")
+@swag_from({
+    'tags': ['Training'],
+    'description':"""
+    此API用來啟動微調，會回傳開始訓練或是敗敗。
+
+    Input:
+    - 可以接受與微調相關的任何參數，若未填寫則使用 default 參數。
+
+    Returns:
+    - JSON 回應訊息：
+      - 成功時：返回開始訓練。
+      - 失敗時：返回錯誤消息及相應的 HTTP 狀態碼。
+    """,
+    'parameters': [
+        {
+            'name': 'config',
+            'in': 'body',
+            'type': 'object',
+            'required': False,
+            'description': 'Training configuration',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'project_name': {'type': 'string'},
+                    'model_name': {'type': 'string'},
+                    'data_path': {'type': 'string'},
+                    'lr': {'type': 'number'},
+                    'epochs': {'type': 'integer'},
+                    'batch_size': {'type': 'integer'},
+                    'dataset_name': {'type': 'string'}
+                }
+            }
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Training started successfully',
+            'examples': {
+                'application/json': {
+                    "status": "Training started successfully",
+                    "config": default_config
+                }
+            }
+        },
+        500: {
+            'description': 'Internal server error',
+            'examples': {
+                'application/json': {
+                    "status": "Error",
+                    "message": "Error message"
+                }
+            }
+        }
+    }
+})
 def train_model():
     try:
         custom_config = request.json
@@ -66,6 +114,45 @@ def train_model():
 
 
 @train_model_bp.post("/chat")
+@swag_from({
+    'tags': ['Chat'],
+    'description':"""
+     此 API 用於啟動聊天服務。
+
+    Returns:
+    - JSON 回應訊息：
+      - 成功時：返回訊息。
+      - 失敗時：返回錯誤訊息，可能是server錯誤或server反應間間過長。
+    """,
+    'parameters': [
+        {
+            'name': 'input_text',
+            'in': 'body',
+            'type': 'string',
+            'required': True,
+            'description': 'Input text for the chat'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Generated chat response',
+            'examples': {
+                'application/json': {
+                    "response": "Generated text"
+                }
+            }
+        },
+        500: {
+            'description': 'Internal server error',
+            'examples': {
+                'application/json': {
+                    "status": "Error",
+                    "message": "Error message"
+                }
+            }
+        }
+    }
+})
 def chat():
     try:
         input_text = request.json.get("input_text", "")
