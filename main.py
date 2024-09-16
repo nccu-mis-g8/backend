@@ -1,10 +1,13 @@
-from flask import Flask
+import os
+from flask import Flask, request
+from werkzeug.utils import secure_filename
 from extensions import db, jwt
 from auth.auth_controller import auth_bp
 from dotenv import load_dotenv
 from flask_swagger_ui import get_swaggerui_blueprint
 from flasgger import Swagger
-from train_model.train_model_controller import train_model_bp
+from utils.sftp import SFTPClient
+# from train_model.train_model_controller import train_model_bp
 
 load_dotenv()
 
@@ -45,10 +48,26 @@ swaggerui_blueprint = get_swaggerui_blueprint(
 
 # register necessary blueprint
 app.register_blueprint(auth_bp, url_prefix="/auth")
-app.register_blueprint(train_model_bp, url_prefix="/finetune")
+# app.register_blueprint(train_model_bp, url_prefix="/finetune")
 
 # Register Swagger UI blueprint
 app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
+
+
+@app.route('/upload', methods=['post'])
+def upload():
+    file = request.files.get('file')
+    filename = secure_filename(file.filename)
+    file.save(os.path.join("train_model",filename))
+
+    #private key 再自己設定
+    sftp = SFTPClient('127.0.0.1',22,'USER','./id_rsa')
+    #csv存檔位置
+    sftp.upload_file('./train_model/user0_training_data_flw.csv')
+    sftp.quit()
+
+    # response我不知道要傳啥
+    return
 
 # define table
 # @app.before_request
