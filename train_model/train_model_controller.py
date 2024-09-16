@@ -1,5 +1,5 @@
 from flask import Blueprint, request, Response, jsonify
-from flasgger import Swagger, swag_from
+from flasgger import swag_from
 import logging
 import json
 from transformers import AutoTokenizer

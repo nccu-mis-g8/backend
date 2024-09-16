@@ -32,7 +32,6 @@ db.init_app(app)
 jwt.init_app(app)
 
 # Initialize Swagger
-# api = Api(app)
 swagger = Swagger(app)
 
 SWAGGER_URL = '/apidocs'  # URL for exposing Swagger UI (without trailing '/')
@@ -44,7 +43,7 @@ swaggerui_blueprint = get_swaggerui_blueprint(
     config={'app_name': "Local Test API"}
 )
 
-# register blueprint
+# register necessary blueprint
 app.register_blueprint(auth_bp, url_prefix="/auth")
 app.register_blueprint(train_model_bp, url_prefix="/finetune")
 
