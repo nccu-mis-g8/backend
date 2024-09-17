@@ -5,11 +5,15 @@ from werkzeug.security import generate_password_hash, check_password_hash
 class User(db.Model):
     __tablename__ = "user"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    username = db.Column(db.String(50), nullable=False)
+    lastname = db.Column(db.String(50), nullable=False)
+    firstname = db.Column(db.String(50), nullable=False)
+    account = db.Column(db.String(50), nullable=False)
     password = db.Column(db.String(255), nullable=False)
 
-    def __init__(self, username, password):
-        self.username = username
+    def __init__(self, lastname, firstname, account, password):
+        self.lastname = lastname
+        self.firstname = firstname
+        self.account = account
         self.password = generate_password_hash(password)
 
     def check_password(self, password):
@@ -25,17 +29,17 @@ class User(db.Model):
         return check_password_hash(self.password, password)
 
     @classmethod
-    def get_user_by_username(cls, username):
+    def get_user_by_account(cls, account):
         """
-        根據用戶名查找並返回對應的 User 實例。
+        根據帳號查找並返回對應的 User 實例。
 
         Parameters:
-        - username (str): 要查找的用戶名。
+        - account (str): 要查找的帳號。
 
         Returns:
         - User 實例，如果找到；否則返回 None。
         """
-        return cls.query.filter_by(username=username).first()
+        return cls.query.filter_by(account=account).first()
 
     def save(self):
         """
@@ -56,7 +60,7 @@ class RefreshToken(db.Model):
     __tablename__ = "refreshTokens"
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete='CASCADE'), nullable=False)
     token = db.Column(db.Text, nullable=False)
     revoked = db.Column(db.Boolean, default=False)
 
