@@ -45,7 +45,7 @@ swaggerui_blueprint = get_swaggerui_blueprint(
 # register necessary blueprint
 app.register_blueprint(auth_bp, url_prefix="/auth")
 app.register_blueprint(train_model_bp, url_prefix="/finetune")
-app.register_blueprint(utils_bp, url_prefix="/")
+app.register_blueprint(utils_bp, url_prefix="/utils")
 
 # Register Swagger UI blueprint
 app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
