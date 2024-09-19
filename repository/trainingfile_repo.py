@@ -6,7 +6,7 @@ from extensions import db
 
 class TrainingFileRepo:
     @staticmethod
-    def create_traingfile(user_id):
+    def create_trainingfile(user_id):
         file = TrainingFile(user_id=user_id)
         db.session.add(file)
         db.session.commit()

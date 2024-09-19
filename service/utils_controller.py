@@ -1,6 +1,5 @@
 from flask import (
     Blueprint,
-    app,
     request,
     jsonify,
 )
@@ -31,7 +30,7 @@ def upload_file():
         return jsonify({"error": "Forbidden"}), 403
 
     # 獲取 userId
-    user_id = user_info.get("userId")
+    user_id = user_info.get("user_Id")
     # Check if a file was provided in the request
     if "file" not in request.files:
         return jsonify({"error": "No file part in the request"}), 400
@@ -44,7 +43,7 @@ def upload_file():
 
     # Validate if the file has a CSV extension
     if file and allowed_file(file.filename):
-        saved_file = TrainingFileRepo.create_traingfile(user_id)
+        saved_file = TrainingFileRepo.create_trainingfile(user_id)
         file.save(os.path.join("../training_file", saved_file.filename))
         return jsonify({"message": "File uploaded successfully"}), 200
     else:
