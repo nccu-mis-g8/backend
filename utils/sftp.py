@@ -22,12 +22,21 @@ class SFTPClient:
                 cnopts=self.cnopts
             )
             print("已連線至SFTP伺服器!")
+
+   
     
     def list_files(self, directory='.'):
         """列出指定目錄中的檔案"""
         self.connect()  # 確保連線是有效的
         files = self.sftp.listdir(directory)
         return files
+    
+    def list_directories(self, directory='.'):
+        """僅列出指定目錄中的資料夾"""
+        self.connect()
+        all_items = self.sftp.listdir_attr(directory)
+        directories = [item.filename for item in all_items if item.longname.startswith('d')]
+        return directories
 
     def change_directory(self, directory):
         """更改當前工作目錄"""
@@ -38,6 +47,13 @@ class SFTPClient:
         """取得當前工作目錄"""
         self.connect()
         return self.sftp.pwd
+    
+    def check_is_folder_exists(self, user_id):
+        directories = self.list_directories()
+        if(user_id in directories):
+            return True
+        
+        return False
     
     def upload_file(self, local_file, remote_file=None):
         """上傳檔案到SFTP伺服器"""
