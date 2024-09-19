@@ -1,6 +1,7 @@
 from flask import Flask
 from extensions import db, jwt
 from service.auth_controller import auth_bp
+from service.utils_controller import utils_bp
 from dotenv import load_dotenv
 from flask_swagger_ui import get_swaggerui_blueprint
 from flasgger import Swagger
@@ -44,6 +45,7 @@ swaggerui_blueprint = get_swaggerui_blueprint(
 # register necessary blueprint
 app.register_blueprint(auth_bp, url_prefix="/auth")
 app.register_blueprint(train_model_bp, url_prefix="/finetune")
+app.register_blueprint(utils_bp, url_prefix="/")
 
 # Register Swagger UI blueprint
 app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
