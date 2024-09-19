@@ -12,6 +12,7 @@ pysftp==0.2.9
 PyJWT==2.8.0
 SQLAlchemy==2.0.27
 torch==2.4.1
-transformers==4.44.2 
+transformers==4.44.2
 Werkzeug==3.0.2
+langchain==0.2.16
 
