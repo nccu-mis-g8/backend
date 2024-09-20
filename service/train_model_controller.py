@@ -33,11 +33,6 @@ generator = transformers.pipeline(
 )
 
 
-@train_model_bp.post("/training_file")
-def upload_training_file():
-    pass
-
-
 @train_model_bp.post("/train_model")
 @swag_from(
     {
