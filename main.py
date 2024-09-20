@@ -2,10 +2,11 @@ from flask import Flask
 from extensions import db, jwt
 from service.auth_controller import auth_bp
 from service.utils_controller import utils_bp
+from service.train_model_controller import train_model_bp
 from dotenv import load_dotenv
 from flask_swagger_ui import get_swaggerui_blueprint
 from flasgger import Swagger
-from train_model.train_model_controller import train_model_bp
+
 
 load_dotenv()
 
