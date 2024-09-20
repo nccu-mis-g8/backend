@@ -1,3 +1,4 @@
+from ast import List
 from flask import Blueprint, request, Response, jsonify
 from flasgger import swag_from
 import logging
@@ -7,6 +8,8 @@ import transformers
 import traceback
 import time
 import torch
+from models.training_file import TrainingFile
+from repository.trainingfile_repo import TrainingFileRepo
 from train_model.finetune import train
 from concurrent.futures import TimeoutError
 from requests.exceptions import RequestException
@@ -90,6 +93,15 @@ generator = transformers.pipeline(
 )
 def train_model():
     try:
+        user_info = request.form.get("user_info")
+        if user_info:
+            user_info = json.loads(user_info)
+        else:
+            return jsonify({"error": "Forbidden"}), 403
+
+        # 獲取 userId
+        user_id = user_info.get("user_Id")
+        files = TrainingFileRepo.find_trainingfile_by_user_id(user_id=user_id)
         custom_config = request.json
         if not custom_config:
             custom_config = default_config
