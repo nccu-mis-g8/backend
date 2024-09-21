@@ -24,3 +24,13 @@ class TrainingFileRepo:
     @staticmethod
     def find_trainingfile_by_user_id(user_id) -> List[TrainingFile]:
         return TrainingFile.query.filter_by(user_id=user_id).all()
+
+    # 取得已訓練的file
+    @staticmethod
+    def find_trained_file_by_user_id(user_id) -> List[TrainingFile]:
+        return TrainingFile.query.filter_by(user_id=user_id, is_trained=True).all()
+
+    # 取得未訓練的file
+    @staticmethod
+    def find_not_trained_file_by_user_id(user_id) -> List[TrainingFile]:
+        return TrainingFile.query.filter_by(user_id=user_id, is_trained=False).all()
