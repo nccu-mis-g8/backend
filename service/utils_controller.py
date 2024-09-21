@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 # only allow to upload csv file
 ALLOWED_EXTENSIONS = set(["csv"])
+FILE_DIRECTORY = "../training_file"
 
 
 def allowed_file(filename):
@@ -90,9 +91,9 @@ def upload_file():
     # 確認檔案類型是否為 csv
     if file and allowed_file(file.filename):
         # 確認目錄是否存在，若不存在則創建目錄
-        file_directory = "../training_file"
-        if not os.path.exists(file_directory):
-            os.makedirs(file_directory)
+
+        if not os.path.exists(FILE_DIRECTORY):
+            os.makedirs(FILE_DIRECTORY)
 
         # 儲存檔案
         saved_file = TrainingFileRepo.create_trainingfile(user_id)
@@ -101,7 +102,7 @@ def upload_file():
                 jsonify({"error": "Unable to create file."}),
                 500,
             )
-        file.save(os.path.join(file_directory, saved_file.filename))
+        file.save(os.path.join(FILE_DIRECTORY, saved_file.filename))
         return jsonify({"message": "File uploaded successfully"}), 200
     else:
         return (

@@ -1,4 +1,3 @@
-from ast import List
 from flask import Blueprint, request, Response, jsonify
 from flasgger import swag_from
 import logging
@@ -8,26 +7,19 @@ import transformers
 import traceback
 import time
 import torch
-from models.training_file import TrainingFile
 from repository.trainingfile_repo import TrainingFileRepo
+from service.utils_controller import FILE_DIRECTORY
 from train_model.finetune import train
 from concurrent.futures import TimeoutError
 from requests.exceptions import RequestException
+import os
+
+from utils.merge_csv_files import merge_csv_files
 
 
 train_model_bp = Blueprint("train_model", __name__)
 logger = logging.getLogger(__name__)
 
-default_config = {
-    "project_name": "my-autotrain-llm",
-    "model_name": "./saved-taide-model",
-    "data_path": "./train_model",
-    "lr": 2e-4,
-    "epochs": 3,
-    "batch_size": 12,
-    "trainer": "sft",
-    "dataset_name": "train.csv",
-}
 
 model = "./my-autotrain-llm"
 tokenizer = AutoTokenizer.from_pretrained(model)
@@ -78,7 +70,6 @@ generator = transformers.pipeline(
                 "examples": {
                     "application/json": {
                         "status": "Training started successfully",
-                        "config": default_config,
                     }
                 },
             },
@@ -102,6 +93,21 @@ def train_model():
         # 獲取 userId
         user_id = user_info.get("user_Id")
         files = TrainingFileRepo.find_trainingfile_by_user_id(user_id=user_id)
+        files_path = [os.path.join(FILE_DIRECTORY, f.filename) for f in files]
+        # merged_file是所有user上傳的file合成的訓練資料
+        merged_file = merge_csv_files(files_path)
+        # default config
+        default_config = {
+            "project_name": "my-autotrain-llm",
+            "model_name": "./saved-taide-model",
+            "data_path": "../training_file",
+            "lr": 2e-4,
+            "epochs": 3,
+            "batch_size": 12,
+            "trainer": "sft",
+            "dataset_name": merged_file,
+        }
+        # 全部的file一次載入並訓練
         custom_config = request.json
         if not custom_config:
             custom_config = default_config
