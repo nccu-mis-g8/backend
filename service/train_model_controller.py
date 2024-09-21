@@ -15,6 +15,7 @@ from concurrent.futures import TimeoutError
 from requests.exceptions import RequestException
 import os
 
+from train_model.llm_training_arg import LLMTrainingArg
 from utils.create_dir import create_dir
 from utils.merge_csv_files import merge_csv_files
 
@@ -103,44 +104,36 @@ def train_model():
         ]
         # merged_file是所有user上傳的file合成的訓練資料
         merged_file = merge_csv_files(files_path)
-        default_config = {}
+        train_config = None
         saved_model = TrainedModelRepo.find_trainedmodel_by_user_id(user_id)
         # 如果是第一次練就生成new_model
         if saved_model is None:
             new_model = TrainedModelRepo.create_trainedmodel(user_id)
             if new_model is None:
                 return jsonify({"status": "Error", "message": "Internel Error"}), 500
-            output_dir = os.path.join("../saved_models", new_model.modelname)
+
+            output_dir = str(os.path.join("../saved_models", new_model.modelname))
             create_dir(output_dir)
-            default_config = {
-                "project_name": output_dir,
-                "model_name": "./saved-taide-model",
-                "data_path": FILE_DIRECTORY,
-                "lr": 2e-4,
-                "epochs": 3,
-                "batch_size": 12,
-                "trainer": "sft",
-                "dataset_name": merged_file,
-            }
+            train_config = LLMTrainingArg(
+                model_dir="../saved-taide-model",
+                saved_model_dir=str(
+                    os.path.join("../saved_models", new_model.modelname)
+                ),
+                output_dir=output_dir,
+                data_path=os.path.join(FILE_DIRECTORY, merged_file),
+            )
         else:
+            output_dir = str(os.path.join("../saved_models", saved_model.modelname))
             # 已經練過了，接續之前練過的model再訓練
-            default_config = {
-                "project_name": os.path.join("../saved_models", saved_model.modelname),
-                "model_name": os.path.join("../saved_models", saved_model.modelname),
-                "data_path": FILE_DIRECTORY,
-                "lr": 2e-4,
-                "epochs": 3,
-                "batch_size": 12,
-                "trainer": "sft",
-                "dataset_name": merged_file,
-            }
+            train_config = LLMTrainingArg(
+                model_dir="../saved-taide-model",
+                saved_model_dir=str(
+                    os.path.join("../saved_models", saved_model.modelname)
+                ),
+                output_dir=output_dir,
+                data_path=os.path.join(FILE_DIRECTORY, merged_file),
+            )
         # 全部的file一次載入並訓練
-        custom_config = request.json
-        if not custom_config:
-            custom_config = default_config
-
-        train_config = {**default_config, **custom_config}
-
         train(train_config)
         # train完成後要做的事
         # 把拿去train的資料is_trained設成true

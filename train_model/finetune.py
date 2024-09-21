@@ -1,14 +1,34 @@
-"""
-api 那可以直接call finetune.train(your_config)
-"""
-
-
 from transformers import AutoModelForCausalLM, AutoTokenizer, Trainer, TrainingArguments
 from trl import SFTConfig, SFTTrainer
 
 from train_model.llm_training_arg import LLMTrainingArg
 from peft import LoraConfig
-from datasets import load_dataset
+import datasets
+import pandas as pd
+
+
+def tokenize(tokenizer, prompt, add_eos_token=True):
+    result = tokenizer(
+        prompt,
+        truncation=True,
+        padding=False,
+        return_tensors=None,
+    )
+    if result["input_ids"][-1] != tokenizer.eos_token_id and add_eos_token:
+        result["input_ids"].append(tokenizer.eos_token_id)
+        result["attention_mask"].append(1)
+
+    result["labels"] = result["input_ids"].copy()
+
+    return result
+
+
+def generate_prompt(data_point):
+    return (
+        "以下是一個描述任務的指令，以及一個與任務資訊相關的輸入。請撰寫一個能適當完成此任務指令的回覆\n\n"
+        f'### 指令：\n{data_point["instruction"]}\n\n### 輸入：\n{data_point["input"]}\n\n'
+        f'### 回覆：\n{data_point["output"]}'
+    )
 
 
 def train(config: LLMTrainingArg):
@@ -41,10 +61,18 @@ def train(config: LLMTrainingArg):
         lr_scheduler_type="constant",
     )
 
+    #
+    def generate_and_tokenize_prompt(data_point):
+        full_prompt = generate_prompt(data_point)
+        tokenized_full_prompt = tokenize(tokenizer, full_prompt)
+        return tokenized_full_prompt
+
+    dataset = datasets.Dataset.from_pandas(pd.read_csv(config.data_path))
+    train_data = dataset.map(generate_and_tokenize_prompt, batched=True)
     print("start training")
     trainer = SFTTrainer(
         model=model,
-        train_dataset=dataset,
+        train_dataset=train_data,
         peft_config=peft_args,
         max_seq_length=None,
         tokenizer=tokenizer,
