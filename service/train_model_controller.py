@@ -110,7 +110,7 @@ def train_model():
             if new_model is None:
                 return jsonify({"status": "Error", "message": "Internel Error"}), 500
             default_config = {
-                "project_name": new_model.modelname,
+                "project_name": os.path.join("../saved_models", new_model.modelname),
                 "model_name": "./saved-taide-model",
                 "data_path": FILE_DIRECTORY,
                 "lr": 2e-4,
@@ -122,7 +122,7 @@ def train_model():
         else:
             # 已經練過了，接續之前練過的model再訓練
             default_config = {
-                "project_name": saved_model.modelname,
+                "project_name": os.path.join("../saved_models", saved_model.modelname),
                 "model_name": saved_model.modelname,
                 "data_path": FILE_DIRECTORY,
                 "lr": 2e-4,
