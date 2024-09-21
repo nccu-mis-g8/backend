@@ -1,37 +1,57 @@
-from autotrain.trainers.clm.params import LLMTrainingParams
-from autotrain.trainers.common import monitor
-
 """
 api 那可以直接call finetune.train(your_config)
 """
 
 
-@monitor
-def train(config):
-    if isinstance(config, dict):
-        config = LLMTrainingParams(**config)
+from transformers import AutoModelForCausalLM, AutoTokenizer, Trainer, TrainingArguments
+from trl import SFTConfig, SFTTrainer
 
-    if config.trainer == "default":
-        from autotrain.trainers.clm.train_clm_default import train as train_default
+from train_model.llm_training_arg import LLMTrainingArg
+from peft import LoraConfig
+from datasets import load_dataset
 
-        train_default(config)
 
-    elif config.trainer == "sft":
-        from autotrain.trainers.clm.train_clm_sft import train as train_sft
+def train(config: LLMTrainingArg):
+    tokenizer = AutoTokenizer.from_pretrained(config.model_dir)
+    model = AutoModelForCausalLM.from_pretrained(config.model_dir, device_map="auto")
 
-        train_sft(config)
+    peft_args = LoraConfig(
+        lora_alpha=16,
+        lora_dropout=0.1,
+        r=64,
+        bias="none",
+        task_type="CAUSAL_LM",
+    )
 
-    elif config.trainer == "reward":
-        from autotrain.trainers.clm.train_clm_reward import train as train_reward
+    training_arg = SFTConfig(
+        output_dir=config.output_dir,
+        num_train_epochs=2,
+        per_device_train_batch_size=4,
+        gradient_accumulation_steps=1,
+        optim="paged_adamw_32bit",
+        learning_rate=2e-4,
+        fp16=False,
+        bf16=False,
+        max_steps=-1,
+        warmup_ratio=0.03,
+        weight_decay=0.001,
+        max_grad_norm=0.3,
+        save_steps=25,
+        logging_steps=25,
+        lr_scheduler_type="constant",
+    )
 
-        train_reward(config)
-
-    elif config.trainer == "dpo":
-        from autotrain.trainers.clm.train_clm_dpo import train as train_dpo
-
-        train_dpo(config)
-
-    elif config.trainer == "orpo":
-        from autotrain.trainers.clm.train_clm_orpo import train as train_orpo
-
-        train_orpo(config)
+    print("start training")
+    trainer = SFTTrainer(
+        model=model,
+        train_dataset=dataset,
+        peft_config=peft_args,
+        max_seq_length=None,
+        tokenizer=tokenizer,
+        args=training_arg,
+        packing=False,
+    )
+    print("Starting training...")
+    trainer.train()
+    print("Saving model...")
+    trainer.model.save_pretrained(config.saved_model_dir)
