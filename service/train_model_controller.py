@@ -107,7 +107,7 @@ def train_model():
             default_config = {
                 "project_name": new_model.modelname,
                 "model_name": "./saved-taide-model",
-                "data_path": "../training_file",
+                "data_path": FILE_DIRECTORY,
                 "lr": 2e-4,
                 "epochs": 3,
                 "batch_size": 12,
@@ -119,7 +119,7 @@ def train_model():
             default_config = {
                 "project_name": saved_model.modelname,
                 "model_name": saved_model.modelname,
-                "data_path": "../training_file",
+                "data_path": FILE_DIRECTORY,
                 "lr": 2e-4,
                 "epochs": 3,
                 "batch_size": 12,
@@ -134,6 +134,11 @@ def train_model():
         train_config = {**default_config, **custom_config}
 
         train(train_config)
+        # 刪掉合成的merged_file
+        try:
+            os.remove(os.path.join(FILE_DIRECTORY, merged_file))
+        except Exception as e:
+            logging.error(f"{e}")
         return (
             jsonify(
                 {"status": "Training started successfully", "config": train_config}
