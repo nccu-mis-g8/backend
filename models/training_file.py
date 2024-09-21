@@ -14,3 +14,6 @@ class TrainingFile(db.Model):
         self.user_id = user_id
         self.filename = str(uuid.uuid4()) + ".csv"
         self.is_trained = False
+
+    def set_is_trained(self, is_trained: bool):
+        self.is_trained = is_trained

@@ -93,8 +93,13 @@ def train_model():
 
         # 獲取 userId
         user_id = user_info.get("user_Id")
-        files = TrainingFileRepo.find_trainingfile_by_user_id(user_id=user_id)
-        files_path = [os.path.join(FILE_DIRECTORY, f.filename) for f in files]
+        # 取得user還沒train過的file
+        not_trained_files = TrainingFileRepo.find_not_trained_file_by_user_id(
+            user_id=user_id
+        )
+        files_path = [
+            os.path.join(FILE_DIRECTORY, f.filename) for f in not_trained_files
+        ]
         # merged_file是所有user上傳的file合成的訓練資料
         merged_file = merge_csv_files(files_path)
         default_config = {}
@@ -134,6 +139,10 @@ def train_model():
         train_config = {**default_config, **custom_config}
 
         train(train_config)
+        # train完成後要做的事
+        # 把拿去train的資料is_trained設成true
+        for f in not_trained_files:
+            TrainingFileRepo.update_is_trained(f, True)
         # 刪掉合成的merged_file
         try:
             os.remove(os.path.join(FILE_DIRECTORY, merged_file))

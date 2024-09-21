@@ -34,3 +34,16 @@ class TrainingFileRepo:
     @staticmethod
     def find_not_trained_file_by_user_id(user_id) -> List[TrainingFile]:
         return TrainingFile.query.filter_by(user_id=user_id, is_trained=False).all()
+
+    @staticmethod
+    def update_is_trained(
+        training_file: TrainingFile, is_trained: bool
+    ) -> Optional[TrainingFile]:
+        training_file.set_is_trained(is_trained)
+        try:
+            db.session.commit()
+            return training_file
+        except Exception as e:
+            db.session.rollback()
+            logging.error(f"Error updating file {training_file.id}: {e}")
+            return None
