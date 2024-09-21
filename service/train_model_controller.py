@@ -15,6 +15,7 @@ from concurrent.futures import TimeoutError
 from requests.exceptions import RequestException
 import os
 
+from utils.create_dir import create_dir
 from utils.merge_csv_files import merge_csv_files
 
 
@@ -109,8 +110,10 @@ def train_model():
             new_model = TrainedModelRepo.create_trainedmodel(user_id)
             if new_model is None:
                 return jsonify({"status": "Error", "message": "Internel Error"}), 500
+            output_dir = os.path.join("../saved_models", new_model.modelname)
+            create_dir(output_dir)
             default_config = {
-                "project_name": os.path.join("../saved_models", new_model.modelname),
+                "project_name": output_dir,
                 "model_name": "./saved-taide-model",
                 "data_path": FILE_DIRECTORY,
                 "lr": 2e-4,
@@ -123,7 +126,7 @@ def train_model():
             # 已經練過了，接續之前練過的model再訓練
             default_config = {
                 "project_name": os.path.join("../saved_models", saved_model.modelname),
-                "model_name": saved_model.modelname,
+                "model_name": os.path.join("../saved_models", saved_model.modelname),
                 "data_path": FILE_DIRECTORY,
                 "lr": 2e-4,
                 "epochs": 3,
