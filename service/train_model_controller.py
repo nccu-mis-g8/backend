@@ -7,6 +7,7 @@ import transformers
 import traceback
 import time
 import torch
+from repository.trainedmodel_repo import TrainedModelRepo
 from repository.trainingfile_repo import TrainingFileRepo
 from service.utils_controller import FILE_DIRECTORY
 from train_model.finetune import train
@@ -96,17 +97,35 @@ def train_model():
         files_path = [os.path.join(FILE_DIRECTORY, f.filename) for f in files]
         # merged_file是所有user上傳的file合成的訓練資料
         merged_file = merge_csv_files(files_path)
-        # default config
-        default_config = {
-            "project_name": "my-autotrain-llm",
-            "model_name": "./saved-taide-model",
-            "data_path": "../training_file",
-            "lr": 2e-4,
-            "epochs": 3,
-            "batch_size": 12,
-            "trainer": "sft",
-            "dataset_name": merged_file,
-        }
+        default_config = {}
+        saved_model = TrainedModelRepo.find_trainedmodel_by_user_id(user_id)
+        # 如果是第一次練就生成new_model
+        if saved_model is None:
+            new_model = TrainedModelRepo.create_trainedmodel(user_id)
+            if new_model is None:
+                return jsonify({"status": "Error", "message": "Internel Error"}), 500
+            default_config = {
+                "project_name": new_model.modelname,
+                "model_name": "./saved-taide-model",
+                "data_path": "../training_file",
+                "lr": 2e-4,
+                "epochs": 3,
+                "batch_size": 12,
+                "trainer": "sft",
+                "dataset_name": merged_file,
+            }
+        else:
+            # 已經練過了，接續之前練過的model再訓練
+            default_config = {
+                "project_name": saved_model.modelname,
+                "model_name": saved_model.modelname,
+                "data_path": "../training_file",
+                "lr": 2e-4,
+                "epochs": 3,
+                "batch_size": 12,
+                "trainer": "sft",
+                "dataset_name": merged_file,
+            }
         # 全部的file一次載入並訓練
         custom_config = request.json
         if not custom_config:
