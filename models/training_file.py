@@ -11,4 +11,4 @@ class TrainingFile(db.Model):
     # 上傳file後先生成TrainingFile物件，再從TrainingFile object拿filename做為檔名存file。
     def __init__(self, user_id):
         self.user_id = user_id
-        self.filename = uuid.uuid4()
+        self.filename = str(uuid.uuid4())
