@@ -32,7 +32,7 @@ def create_formatted_content(file_name):
     lines = None
     with open(file_name, encoding="utf-8") as f:
         lines = f.readlines()
-    if lines == None:
+    if lines is None:
         return
     pre_is_master = False
 
