@@ -34,7 +34,7 @@ generator = transformers.pipeline(
     {
         "tags": ["Training"],
         "description": """
-    此API用來啟動微調，會回傳開始訓練或是敗敗。
+    此API用來啟動微調，會回傳開始訓練或是失敗。
 
     Input:
     - 可以接受與微調相關的任何參數，若未填寫則使用 default 參數。
