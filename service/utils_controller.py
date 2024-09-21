@@ -96,7 +96,7 @@ def upload_file():
             os.makedirs(FILE_DIRECTORY)
 
         # 儲存檔案
-        saved_file = TrainingFileRepo.create_trainingfile(user_id)
+        saved_file = TrainingFileRepo.create_trainingfile(user_id, file.filename)
         if saved_file is None:
             return (
                 jsonify({"error": "Unable to create file."}),
