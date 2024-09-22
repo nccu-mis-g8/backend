@@ -7,11 +7,12 @@ import datasets
 import pandas as pd
 
 
-def tokenize(tokenizer, prompt, add_eos_token=True):
+def tokenize(tokenizer, prompt, max_length=1000, add_eos_token=True):
     result = tokenizer(
         prompt,
         truncation=True,
         padding=False,
+        max_length=max_length,  # Enforce maximum sequence length
         return_tensors=None,
     )
     if result["input_ids"][-1] != tokenizer.eos_token_id and add_eos_token:
