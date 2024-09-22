@@ -63,35 +63,39 @@ def train(config: LLMTrainingArg):
     )
 
     #
-    def generate_and_tokenize_prompt(batch):
-        # Generate full prompts for each example in the batch
-        full_prompts = generate_prompt(batch)
+   import torch
 
-        # Tokenize the batch of prompts
-        tokenized_full_prompts = tokenizer(
-            full_prompts,
-            truncation=True,
-            padding=False,
-            max_length=1000,
-            return_tensors="pt",  # Ensure consistent tensor format
-        )
+   def generate_and_tokenize_prompt(batch):
+       # Generate full prompts for each example in the batch
+       full_prompts = generate_prompt(batch)
 
-        # Add EOS tokens and create labels for each example in the batch
-        if tokenizer.eos_token_id:
-            for i in range(len(tokenized_full_prompts["input_ids"])):
-                # Ensure input_ids and attention_mask are lists and valid
-                if tokenized_full_prompts["input_ids"][i][-1] != tokenizer.eos_token_id:
-                    tokenized_full_prompts["input_ids"][i].append(
-                        tokenizer.eos_token_id
-                    )
-                    tokenized_full_prompts["attention_mask"][i].append(1)
+       # Tokenize the batch of prompts
+       tokenized_full_prompts = tokenizer(
+           full_prompts,
+           truncation=True,
+           padding=False,
+           max_length=1000,
+           return_tensors="pt",  # Return as PyTorch tensors
+       )
 
-        # Copy input_ids to labels
-        tokenized_full_prompts["labels"] = [
-            ids.copy() for ids in tokenized_full_prompts["input_ids"]
-        ]
+       # Add EOS tokens and create labels for each example in the batch
+       eos_token_id = tokenizer.eos_token_id
+       if eos_token_id is not None:
+           # Add EOS token if it's not already at the end of input_ids
+           input_ids = tokenized_full_prompts["input_ids"]
+           attention_mask = tokenized_full_prompts["attention_mask"]
 
-        return tokenized_full_prompts
+           # Iterate over each example in the batch
+           for i in range(len(input_ids)):
+               if input_ids[i][-1] != eos_token_id:
+                   # Add EOS token using torch.cat
+                   tokenized_full_prompts["input_ids"][i] = torch.cat([input_ids[i], torch.tensor([eos_token_id])])
+                   tokenized_full_prompts["attention_mask"][i] = torch.cat([attention_mask[i], torch.tensor([1])])
+
+       # Copy input_ids to labels for language modeling task
+       tokenized_full_prompts["labels"] = tokenized_full_prompts["input_ids"].clone()
+
+       return tokenized_full_prompts
 
     dataset = datasets.Dataset.from_pandas(pd.read_csv(config.data_path))
     train_data = dataset.map(generate_and_tokenize_prompt, batched=True)
