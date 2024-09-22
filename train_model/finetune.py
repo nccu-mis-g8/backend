@@ -69,6 +69,18 @@ def train(config: LLMTrainingArg):
     )
 
     #
+    def formatting_prompts_func(example):
+        output_texts = []
+        for i in range(len(example["instruction"])):
+            text = (
+                "以下是一個描述任務的指令，以及一個與任務資訊相關的輸入。請撰寫一個能適當完成此任務指令的回覆\n\n"
+                f'### 指令：\n{example["instruction"][i]}\n\n### 輸入：\n{example["input"][i]}\n\n'
+                f'### 回覆：\n{example["output"][i]}'
+            )
+            output_texts.append(text)
+        return output_texts
+
+    #
     def generate_and_tokenize_prompt(data_point):
         full_prompt = generate_prompt(data_point)
         tokenized_full_prompt = tokenize(tokenizer, full_prompt)
@@ -84,6 +96,7 @@ def train(config: LLMTrainingArg):
         max_seq_length=None,
         tokenizer=tokenizer,
         args=training_arg,
+        formatting_func=formatting_prompts_func,
     )
     print("Starting training...")
     trainer.train()
