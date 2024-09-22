@@ -84,7 +84,6 @@ def train(config: LLMTrainingArg):
         max_seq_length=None,
         tokenizer=tokenizer,
         args=training_arg,
-        packing=False,
     )
     print("Starting training...")
     trainer.train()
