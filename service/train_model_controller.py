@@ -20,21 +20,15 @@ from utils.create_dir import create_dir
 from utils.merge_csv_files import merge_csv_files
 
 
-train_model_bp = Blueprint("train_model", __name__)
+train_model_bp = Blueprint("finetune", __name__)
 logger = logging.getLogger(__name__)
 
-
-model = "./my-autotrain-llm"
-tokenizer = AutoTokenizer.from_pretrained(model)
-generator = transformers.pipeline(
-    "text-generation", model=model, torch_dtype=torch.float16, framework="pt"
-)
 
 
 @train_model_bp.post("/train_model")
 @swag_from(
     {
-        "tags": ["Training"],
+        "tags": ["Train"],
         "description": """
     此API用來啟動微調，會回傳開始訓練或是失敗。
 
@@ -46,27 +40,6 @@ generator = transformers.pipeline(
       - 成功時：返回開始訓練。
       - 失敗時：返回錯誤消息及相應的 HTTP 狀態碼。
     """,
-        "parameters": [
-            {
-                "name": "config",
-                "in": "body",
-                "type": "object",
-                "required": False,
-                "description": "Training configuration",
-                "schema": {
-                    "type": "object",
-                    "properties": {
-                        "project_name": {"type": "string"},
-                        "model_name": {"type": "string"},
-                        "data_path": {"type": "string"},
-                        "lr": {"type": "number"},
-                        "epochs": {"type": "integer"},
-                        "batch_size": {"type": "integer"},
-                        "dataset_name": {"type": "string"},
-                    },
-                },
-            }
-        ],
         "responses": {
             200: {
                 "description": "Training started successfully",
@@ -86,15 +59,15 @@ generator = transformers.pipeline(
     }
 )
 def train_model():
-    try:
-        user_info = request.form.get("user_info")
-        if user_info:
-            user_info = json.loads(user_info)
-        else:
-            return jsonify({"error": "Forbidden"}), 403
+    user_info = request.form.get("user_info")
+    if user_info:
+        user_info = json.loads(user_info)
+    else:
+        return jsonify({"error": "Forbidden"}), 403
 
-        # 獲取 userId
-        user_id = user_info.get("user_Id")
+    # 獲取 userId
+    user_id = user_info.get("user_Id")
+    try:
         # 取得user還沒train過的file
         not_trained_files = TrainingFileRepo.find_not_trained_file_by_user_id(
             user_id=user_id
@@ -115,7 +88,7 @@ def train_model():
             output_dir = str(os.path.join("../saved_models", new_model.modelname))
             create_dir(output_dir)
             train_config = LLMTrainingArg(
-                model_dir="../saved-taide-model",
+                model_dir="./train_model/saved-taide-model",
                 saved_model_dir=str(
                     os.path.join("../saved_models", new_model.modelname)
                 ),
@@ -126,7 +99,9 @@ def train_model():
             output_dir = str(os.path.join("../saved_models", saved_model.modelname))
             # 已經練過了，接續之前練過的model再訓練
             train_config = LLMTrainingArg(
-                model_dir="../saved-taide-model",
+                model_dir=str(
+                    os.path.join("../saved_models", saved_model.modelname)
+                ),
                 saved_model_dir=str(
                     os.path.join("../saved_models", saved_model.modelname)
                 ),
@@ -155,40 +130,40 @@ def train_model():
 
 
 @train_model_bp.post("/chat")
-@swag_from(
-    {
-        "tags": ["Chat"],
-        "description": """
-     此 API 用於啟動聊天服務。
+# @swag_from(
+#     {
+#         "tags": ["Chat"],
+#         "description": """
+#      此 API 用於啟動聊天服務。
 
-    Returns:
-    - JSON 回應訊息：
-      - 成功時：返回訊息。
-      - 失敗時：返回錯誤訊息，可能是server錯誤或server反應間間過長。
-    """,
-        "parameters": [
-            {
-                "name": "input_text",
-                "in": "body",
-                "type": "string",
-                "required": True,
-                "description": "Input text for the chat",
-            }
-        ],
-        "responses": {
-            200: {
-                "description": "Generated chat response",
-                "examples": {"application/json": {"response": "Generated text"}},
-            },
-            500: {
-                "description": "Internal server error",
-                "examples": {
-                    "application/json": {"status": "Error", "message": "Error message"}
-                },
-            },
-        },
-    }
-)
+#     Returns:
+#     - JSON 回應訊息：
+#       - 成功時：返回訊息。
+#       - 失敗時：返回錯誤訊息，可能是server錯誤或server反應間間過長。
+#     """,
+#         "parameters": [
+#             {
+#                 "name": "input_text",
+#                 "in": "body",
+#                 "type": "string",
+#                 "required": True,
+#                 "description": "Input text for the chat",
+#             }
+#         ],
+#         "responses": {
+#             200: {
+#                 "description": "Generated chat response",
+#                 "examples": {"application/json": {"response": "Generated text"}},
+#             },
+#             500: {
+#                 "description": "Internal server error",
+#                 "examples": {
+#                     "application/json": {"status": "Error", "message": "Error message"}
+#                 },
+#             },
+#         },
+#     }
+# )
 def chat():
     try:
         input_text = request.json.get("input_text", "")
