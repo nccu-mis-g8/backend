@@ -6,16 +6,22 @@ from peft import LoraConfig
 import datasets
 import pandas as pd
 
+CUTOFF_LEN = 1000
 
-def tokenize(tokenizer, prompt, max_length=1000, add_eos_token=True):
+
+def tokenize(tokenizer, prompt, add_eos_token=True):
     result = tokenizer(
         prompt,
         truncation=True,
+        max_length=CUTOFF_LEN,
         padding=False,
-        max_length=max_length,  # Enforce maximum sequence length
         return_tensors=None,
     )
-    if result["input_ids"][-1] != tokenizer.eos_token_id and add_eos_token:
+    if (
+        result["input_ids"][-1] != tokenizer.eos_token_id
+        and len(result["input_ids"]) < CUTOFF_LEN
+        and add_eos_token
+    ):
         result["input_ids"].append(tokenizer.eos_token_id)
         result["attention_mask"].append(1)
 
@@ -63,42 +69,13 @@ def train(config: LLMTrainingArg):
     )
 
     #
-   import torch
-
-   def generate_and_tokenize_prompt(batch):
-       # Generate full prompts for each example in the batch
-       full_prompts = generate_prompt(batch)
-
-       # Tokenize the batch of prompts
-       tokenized_full_prompts = tokenizer(
-           full_prompts,
-           truncation=True,
-           padding=False,
-           max_length=1000,
-           return_tensors="pt",  # Return as PyTorch tensors
-       )
-
-       # Add EOS tokens and create labels for each example in the batch
-       eos_token_id = tokenizer.eos_token_id
-       if eos_token_id is not None:
-           # Add EOS token if it's not already at the end of input_ids
-           input_ids = tokenized_full_prompts["input_ids"]
-           attention_mask = tokenized_full_prompts["attention_mask"]
-
-           # Iterate over each example in the batch
-           for i in range(len(input_ids)):
-               if input_ids[i][-1] != eos_token_id:
-                   # Add EOS token using torch.cat
-                   tokenized_full_prompts["input_ids"][i] = torch.cat([input_ids[i], torch.tensor([eos_token_id])])
-                   tokenized_full_prompts["attention_mask"][i] = torch.cat([attention_mask[i], torch.tensor([1])])
-
-       # Copy input_ids to labels for language modeling task
-       tokenized_full_prompts["labels"] = tokenized_full_prompts["input_ids"].clone()
-
-       return tokenized_full_prompts
+    def generate_and_tokenize_prompt(data_point):
+        full_prompt = generate_prompt(data_point)
+        tokenized_full_prompt = tokenize(tokenizer, full_prompt)
+        return tokenized_full_prompt
 
     dataset = datasets.Dataset.from_pandas(pd.read_csv(config.data_path))
-    train_data = dataset.map(generate_and_tokenize_prompt, batched=True)
+    train_data = dataset.map(generate_and_tokenize_prompt)
     print("start training")
     trainer = SFTTrainer(
         model=model,
