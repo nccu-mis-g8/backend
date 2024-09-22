@@ -24,7 +24,6 @@ train_model_bp = Blueprint("finetune", __name__)
 logger = logging.getLogger(__name__)
 
 
-
 @train_model_bp.post("/train_model")
 @swag_from(
     {
@@ -99,9 +98,7 @@ def train_model():
             output_dir = str(os.path.join("../saved_models", saved_model.modelname))
             # 已經練過了，接續之前練過的model再訓練
             train_config = LLMTrainingArg(
-                model_dir=str(
-                    os.path.join("../saved_models", saved_model.modelname)
-                ),
+                model_dir=str(os.path.join("../saved_models", saved_model.modelname)),
                 saved_model_dir=str(
                     os.path.join("../saved_models", saved_model.modelname)
                 ),
@@ -135,6 +132,7 @@ def train_model():
 #         "tags": ["Chat"],
 #         "description": """
 #      此 API 用於啟動聊天服務。
+
 
 #     Returns:
 #     - JSON 回應訊息：
