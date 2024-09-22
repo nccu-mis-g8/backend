@@ -78,6 +78,7 @@ def train_model():
         merged_file = merge_csv_files(files_path)
         train_config = None
         saved_model = TrainedModelRepo.find_trainedmodel_by_user_id(user_id)
+        new_model = None
         # 如果是第一次練就生成new_model
         if saved_model is None:
             new_model = TrainedModelRepo.create_trainedmodel(user_id)
@@ -107,6 +108,8 @@ def train_model():
             )
         # 全部的file一次載入並訓練
         train(train_config)
+        if new_model is not None:
+            TrainedModelRepo.save_trainedmodel(new_model)
         # train完成後要做的事
         # 把拿去train的資料is_trained設成true
         for f in not_trained_files:

@@ -7,16 +7,18 @@ import logging
 
 class TrainedModelRepo:
     @staticmethod
-    def create_trainedmodel(user_id) -> Optional[TrainedModel]:
-        model = TrainedModel(user_id)
+    def create_trainedmodel(user_id) -> TrainedModel:
+        return TrainedModel(user_id=user_id)
+
+    @staticmethod
+    def save_trainedmodel(model: TrainedModel) -> Optional[TrainedModel]:
         db.session.add(model)
         try:
             db.session.commit()
             return model
         except Exception as e:
             db.session.rollback()
-            logging.error(f"Error creating TrainedModel for user {user_id}: {e}")
-            return None
+            logging.error(f"Error creating TrainedModel for user {model.user_id}: {e}")
 
     @staticmethod
     def get_all_trainedmodel() -> List[TrainedModel]:
