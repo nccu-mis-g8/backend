@@ -64,8 +64,8 @@ def train(config: LLMTrainingArg):
 
     #
     def generate_and_tokenize_prompt(batch):
-        # Ensure the batch is processed as a list of data points
-        full_prompts = [generate_prompt(data_point) for data_point in batch]
+        # Generate full prompts for each example in the batch
+        full_prompts = generate_prompt(batch)
 
         # Tokenize the batch of prompts
         tokenized_full_prompts = tokenizer(
@@ -76,7 +76,7 @@ def train(config: LLMTrainingArg):
             return_tensors="pt",  # Ensure consistent tensor format
         )
 
-        # Add EOS tokens and create labels
+        # Add EOS tokens and create labels for each example in the batch
         if tokenizer.eos_token_id:
             for i in range(len(tokenized_full_prompts["input_ids"])):
                 # Ensure input_ids and attention_mask are lists and valid
