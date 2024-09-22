@@ -63,10 +63,35 @@ def train(config: LLMTrainingArg):
     )
 
     #
-    def generate_and_tokenize_prompt(data_point):
-        full_prompt = generate_prompt(data_point)
-        tokenized_full_prompt = tokenize(tokenizer, full_prompt)
-        return tokenized_full_prompt
+    def generate_and_tokenize_prompt(batch):
+        # Ensure the batch is processed as a list of data points
+        full_prompts = [generate_prompt(data_point) for data_point in batch]
+
+        # Tokenize the batch of prompts
+        tokenized_full_prompts = tokenizer(
+            full_prompts,
+            truncation=True,
+            padding=False,
+            max_length=1000,
+            return_tensors="pt",  # Ensure consistent tensor format
+        )
+
+        # Add EOS tokens and create labels
+        if tokenizer.eos_token_id:
+            for i in range(len(tokenized_full_prompts["input_ids"])):
+                # Ensure input_ids and attention_mask are lists and valid
+                if tokenized_full_prompts["input_ids"][i][-1] != tokenizer.eos_token_id:
+                    tokenized_full_prompts["input_ids"][i].append(
+                        tokenizer.eos_token_id
+                    )
+                    tokenized_full_prompts["attention_mask"][i].append(1)
+
+        # Copy input_ids to labels
+        tokenized_full_prompts["labels"] = [
+            ids.copy() for ids in tokenized_full_prompts["input_ids"]
+        ]
+
+        return tokenized_full_prompts
 
     dataset = datasets.Dataset.from_pandas(pd.read_csv(config.data_path))
     train_data = dataset.map(generate_and_tokenize_prompt, batched=True)
