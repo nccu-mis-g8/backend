@@ -9,7 +9,6 @@ from trl import SFTConfig, SFTTrainer
 
 from train_model.llm_training_arg import LLMTrainingArg
 from peft import (
-    prepare_model_for_int8_training,
     LoraConfig,
     get_peft_model,
     get_peft_model_state_dict,
@@ -72,7 +71,7 @@ def train(config: LLMTrainingArg):
     if model is None:
         print("Failed to load model.")
 
-    model = prepare_model_for_int8_training(model)
+    model = prepare_model_for_kbit_training(model)
 
     peft_args = LoraConfig(
         lora_alpha=16,
