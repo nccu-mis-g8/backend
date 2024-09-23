@@ -40,7 +40,9 @@ def generate_prompt(data_point):
 
 def train(config: LLMTrainingArg):
     tokenizer = AutoTokenizer.from_pretrained(config.model_dir)
-    model = AutoModelForCausalLM.from_pretrained(config.model_dir, device_map="cuda")
+    model = AutoModelForCausalLM.from_pretrained(
+        config.model_dir, device_map="cuda", load_in_8bit=True
+    )
     if model is None:
         print("Failed to load model.")
 
