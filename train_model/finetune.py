@@ -14,7 +14,7 @@ def tokenize(tokenizer, prompt, add_eos_token=True):
         prompt,
         truncation=True,
         max_length=CUTOFF_LEN,
-        padding=False,
+        padding="max_length",
         return_tensors=None,
     )
     if (
@@ -40,7 +40,9 @@ def generate_prompt(data_point):
 
 def train(config: LLMTrainingArg):
     tokenizer = AutoTokenizer.from_pretrained(config.model_dir)
-    model = AutoModelForCausalLM.from_pretrained(config.model_dir, device_map="auto")
+    model = AutoModelForCausalLM.from_pretrained(config.model_dir, device_map="cuda")
+    if model is None:
+        print("Failed to load model.")
 
     peft_args = LoraConfig(
         lora_alpha=16,
