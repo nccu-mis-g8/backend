@@ -59,7 +59,10 @@ def train(config: LLMTrainingArg):
         bnb_4bit_compute_dtype=torch.bfloat16,
     )
     tokenizer = AutoTokenizer.from_pretrained(
-        config.model_dir, add_eos_token=True, quantization_config=nf4_config
+        config.model_dir,
+        add_eos_token=True,
+        # 不要傳quantization_config，否則會報錯
+        # quantization_config=nf4_config
     )
     tokenizer.pad_token = tokenizer.eos_token
 
