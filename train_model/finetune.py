@@ -78,19 +78,19 @@ def train(config: LLMTrainingArg):
 
     peft_args = LoraConfig(
         lora_alpha=16,
-        lora_dropout=0.1,
-        r=64,
+        lora_dropout=0.05,
+        lora_r=8,
         bias="none",
         task_type="CAUSAL_LM",
     )
 
     training_arg = SFTConfig(
         output_dir=config.output_dir,
-        num_train_epochs=2,
+        num_train_epochs=3,
         per_device_train_batch_size=2,
         gradient_accumulation_steps=2,
         # optim="paged_adamw_32bit",
-        learning_rate=2e-2,
+        learning_rate=3e-5, #中等學習率
         # fp16=False,
         fp16=True,
         # bf16=False,
