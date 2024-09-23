@@ -1,8 +1,20 @@
-from transformers import AutoModelForCausalLM, AutoTokenizer, Trainer, TrainingArguments
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    BitsAndBytesConfig,
+    Trainer,
+    TrainingArguments,
+)
 from trl import SFTConfig, SFTTrainer
 
 from train_model.llm_training_arg import LLMTrainingArg
-from peft import LoraConfig
+from peft import (
+    prepare_model_for_int8_training,
+    LoraConfig,
+    get_peft_model,
+    get_peft_model_state_dict,
+    prepare_model_for_kbit_training,
+)
 import datasets
 import pandas as pd
 import torch
@@ -41,12 +53,26 @@ def generate_prompt(data_point):
 
 def train(config: LLMTrainingArg):
     device_map = "auto" if torch.cuda.is_available() else "cpu"
-    tokenizer = AutoTokenizer.from_pretrained(config.model_dir)
+    nf4_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_use_double_quant=True,
+        bnb_4bit_compute_dtype=torch.bfloat16,
+    )
+    tokenizer = AutoTokenizer.from_pretrained(
+        config.model_dir, add_eos_token=True, quantization_config=nf4_config
+    )
+    tokenizer.pad_token = tokenizer.eos_token
+
     model = AutoModelForCausalLM.from_pretrained(
-        config.model_dir, device_map=device_map, load_in_8bit=True
+        config.model_dir,
+        device_map=device_map,
+        quantization_config=nf4_config,
     )
     if model is None:
         print("Failed to load model.")
+
+    model = prepare_model_for_int8_training(model)
 
     peft_args = LoraConfig(
         lora_alpha=16,
@@ -68,7 +94,7 @@ def train(config: LLMTrainingArg):
         # bf16=False,
         max_steps=-1,
         warmup_ratio=0.03,
-        weight_decay=0.1,
+        weight_decay=0.0,  # 權重衰減
         max_grad_norm=0.3,
         save_steps=25,
         logging_steps=25,

@@ -14,4 +14,5 @@ SQLAlchemy==2.0.27
 torch==2.4.1
 transformers==4.44.2
 Werkzeug==3.0.2
+peft==0.9.0
 
