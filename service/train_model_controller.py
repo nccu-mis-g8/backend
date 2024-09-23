@@ -2,11 +2,10 @@ from flask import Blueprint, request, Response, jsonify
 from flasgger import swag_from
 import logging
 import json
-from transformers import AutoTokenizer
-import transformers
+
 import traceback
 import time
-import torch
+
 from repository.trainedmodel_repo import TrainedModelRepo
 from repository.trainingfile_repo import TrainingFileRepo
 from service.utils_controller import FILE_DIRECTORY
@@ -81,6 +80,7 @@ def train_model():
         new_model = None
         # 如果是第一次練就生成new_model
         if saved_model is None:
+            print("第一次訓練")
             new_model = TrainedModelRepo.create_trainedmodel(user_id)
             if new_model is None:
                 return jsonify({"status": "Error", "message": "Internel Error"}), 500
@@ -96,6 +96,7 @@ def train_model():
                 data_path=os.path.join(FILE_DIRECTORY, merged_file),
             )
         else:
+            print("接續舊的model繼續訓練")
             output_dir = str(os.path.join("../saved_models", saved_model.modelname))
             # 已經練過了，接續之前練過的model再訓練
             train_config = LLMTrainingArg(
