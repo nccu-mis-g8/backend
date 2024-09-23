@@ -5,6 +5,7 @@ from train_model.llm_training_arg import LLMTrainingArg
 from peft import LoraConfig
 import datasets
 import pandas as pd
+import torch
 
 CUTOFF_LEN = 1000
 
@@ -39,9 +40,10 @@ def generate_prompt(data_point):
 
 
 def train(config: LLMTrainingArg):
+    device_map = "auto" if torch.cuda.is_available() else "cpu"
     tokenizer = AutoTokenizer.from_pretrained(config.model_dir)
     model = AutoModelForCausalLM.from_pretrained(
-        config.model_dir, device_map="cuda", load_in_8bit=True
+        config.model_dir, device_map=device_map, load_in_8bit=True
     )
     if model is None:
         print("Failed to load model.")
