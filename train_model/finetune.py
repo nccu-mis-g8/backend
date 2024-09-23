@@ -133,4 +133,4 @@ def train(config: LLMTrainingArg):
     print("Starting training...")
     trainer.train()
     print("Saving model...")
-    trainer.model.save_pretrained(config.saved_model_dir)
+    model.save_pretrained(config.saved_model_dir)
