@@ -19,7 +19,7 @@ import datasets
 import pandas as pd
 import torch
 
-CUTOFF_LEN = 1000
+CUTOFF_LEN = 512
 
 
 def tokenize(tokenizer, prompt, add_eos_token=True):
