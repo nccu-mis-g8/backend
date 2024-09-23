@@ -59,7 +59,7 @@ def train(config: LLMTrainingArg):
     training_arg = SFTConfig(
         output_dir=config.output_dir,
         num_train_epochs=2,
-        per_device_train_batch_size=4,
+        per_device_train_batch_size=2,
         gradient_accumulation_steps=1,
         optim="paged_adamw_32bit",
         learning_rate=2e-4,
