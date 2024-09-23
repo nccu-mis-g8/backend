@@ -67,11 +67,10 @@ def train(config: LLMTrainingArg):
         bf16=False,
         max_steps=-1,
         warmup_ratio=0.03,
-        # weight_decay=0.001,
+        weight_decay=0.1,
         max_grad_norm=0.3,
         save_steps=25,
         logging_steps=25,
-        lr_scheduler_type="constant",
     )
 
     #
@@ -92,7 +91,7 @@ def train(config: LLMTrainingArg):
         tokenized_full_prompt = tokenize(tokenizer, full_prompt)
         return tokenized_full_prompt
 
-    dataset = datasets.Dataset.from_pandas(pd.read_csv(config.data_path))
+    dataset = datasets.Dataset.from_pandas(pd.read_csv(config.data_path).head(100))
     train_data = dataset.map(generate_and_tokenize_prompt)
     print("start training")
     trainer = SFTTrainer(
