@@ -15,13 +15,11 @@ utils_bp = Blueprint("utils", __name__)
 logger = logging.getLogger(__name__)
 
 
-# only allow to upload csv file
-ALLOWED_EXTENSIONS = set(["csv"])
 FILE_DIRECTORY = "..\\training_file"
 
 
-def allowed_file(filename):
-    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+def allowed_file(filename, extension):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() == extension
 
 
 @utils_bp.post("/user/upload_file")
@@ -69,7 +67,7 @@ def allowed_file(filename):
         },
     }
 )
-def upload_file():
+def upload_csv_file():
     user_info = request.form.get("user_info")
     if user_info:
         user_info = json.loads(user_info)
@@ -90,7 +88,7 @@ def upload_file():
         return jsonify({"error": "No file provided"}), 400
 
     # 確認檔案類型是否為 csv
-    if file and allowed_file(file.filename):
+    if file and allowed_file(file.filename, "csv"):
         # 確認目錄是否存在，若不存在則創建目錄
 
         if not os.path.exists(FILE_DIRECTORY):
