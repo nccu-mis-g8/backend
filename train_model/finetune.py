@@ -4,8 +4,6 @@ from transformers import (
     BitsAndBytesConfig,
 )
 from trl import SFTConfig, SFTTrainer
-
-
 from peft import (
     LoraConfig,
     get_peft_model,
@@ -59,7 +57,7 @@ def train(id: str, model_dir: str, save_dir: str, data_path: str):
         bnb_4bit_compute_dtype=torch.bfloat16,
     )
     tokenizer = AutoTokenizer.from_pretrained(
-        model_dir,
+        BASE_MODEL_DIR,
         add_eos_token=True,
         # 不要傳quantization_config，否則會報錯
         # quantization_config=nf4_config
@@ -67,7 +65,7 @@ def train(id: str, model_dir: str, save_dir: str, data_path: str):
     tokenizer.pad_token = tokenizer.eos_token
 
     model = AutoModelForCausalLM.from_pretrained(
-        BASE_MODEL_DIR,
+        model_dir,
         device_map=device_map,
         quantization_config=nf4_config,
     )
