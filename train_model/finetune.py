@@ -90,7 +90,8 @@ def train(config: LLMTrainingArg):
         per_device_train_batch_size=2,
         gradient_accumulation_steps=2,
         # optim="paged_adamw_32bit",
-        learning_rate=3e-5, #中等學習率
+        # learning_rate=3e-5,  # 中等學習率
+        learning_rate=3e-4,
         # fp16=False,
         fp16=True,
         # bf16=False,
