@@ -32,7 +32,7 @@ def create_formatted_content(file_name):
     lines = None
     with open(file_name, encoding="utf-8") as f:
         lines = f.readlines()
-    if lines == None:
+    if lines is None:
         return
     pre_is_master = False
 
@@ -72,7 +72,7 @@ def output_file(instructions_list, inputs_list, outputs_list):
         or len(instructions_list) != len(outputs_list)
     ):
         return
-    block_title = "=你是好友，也是大學同學。請以好友的回氣回答對話。"
+    block_title = "你是好友，也是大學同學。請以好友的回氣回答對話。"
     with open(output_file_name, "w", encoding="utf-8") as writer:
         fieldnames = ["instruction", "input", "output", "text"]
         writer = csv.DictWriter(writer, fieldnames=fieldnames)
@@ -80,10 +80,9 @@ def output_file(instructions_list, inputs_list, outputs_list):
         for i in range(len(instructions_list)):
             writer.writerow(
                 {
-                    "instruction": instructions_list[i],
-                    "input": "",
+                    "input": instructions_list[i],
                     "output": outputs_list[i],
-                    "text": block_title,
+                    "instruction": block_title,
                 }
             )
 
