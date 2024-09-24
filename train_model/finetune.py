@@ -67,7 +67,7 @@ def train(id: str, model_dir: str, save_dir: str, data_path: str):
     tokenizer.pad_token = tokenizer.eos_token
 
     model = AutoModelForCausalLM.from_pretrained(
-        model_dir,
+        BASE_MODEL_DIR,
         device_map=device_map,
         quantization_config=nf4_config,
     )
