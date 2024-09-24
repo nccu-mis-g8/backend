@@ -129,42 +129,54 @@ def train_model():
 
 
 @train_model_bp.post("/chat")
-# @swag_from(
-#     {
-#         "tags": ["Chat"],
-#         "description": """
-#      此 API 用於啟動聊天服務。
+@swag_from(
+    {
+        "tags": ["Chat"],
+        "description": """
+     此 API 用於啟動聊天服務。
 
 
-#     Returns:
-#     - JSON 回應訊息：
-#       - 成功時：返回訊息。
-#       - 失敗時：返回錯誤訊息，可能是server錯誤或server反應間間過長。
-#     """,
-#         "parameters": [
-#             {
-#                 "name": "input_text",
-#                 "in": "body",
-#                 "type": "string",
-#                 "required": True,
-#                 "description": "Input text for the chat",
-#             }
-#         ],
-#         "responses": {
-#             200: {
-#                 "description": "Generated chat response",
-#                 "examples": {"application/json": {"response": "Generated text"}},
-#             },
-#             500: {
-#                 "description": "Internal server error",
-#                 "examples": {
-#                     "application/json": {"status": "Error", "message": "Error message"}
-#                 },
-#             },
-#         },
-#     }
-# )
+    Returns:
+    - JSON 回應訊息：
+      - 成功時：返回訊息。
+      - 失敗時：返回錯誤訊息，可能是server錯誤或server反應間間過長。
+    """,
+        "parameters": [
+            {
+                "name": "input_text",
+                "in": "body",
+                "type": "string",
+                "required": True,
+                "description": "Input text for the chat",
+            }
+        ],
+        "responses": {
+            200: {
+                "description": "Generated chat response",
+                "examples": {"application/json": {"response": "Generated text"}},
+            },
+            500: {
+                "description": "Internal server error",
+                "examples": {
+                    "application/json": {"status": "Error", "message": "Error message"}
+                },
+            },
+        },
+    }
+)
 def chat():
+    user_info = request.form.get("user_info")
+    if user_info:
+        user_info = json.loads(user_info)
+    else:
+        return jsonify({"error": "Forbidden"}), 403
+
+    # 獲取 userId
+    user_id = user_info.get("user_Id")
+    trained_model = TrainedModelRepo.find_trainedmodel_by_user_id(user_id=user_id)
+    model_dir = BASE_MODEL_DIR
+    if trained_model is not None:
+        model_dir = str(os.path.join("..\\saved_models", trained_model.modelname))
     try:
         input_text = request.json.get("input_text", "")
         if not input_text:
