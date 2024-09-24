@@ -109,3 +109,51 @@ def upload_file():
             jsonify({"error": "File type not allowed. Only CSV files are allowed."}),
             400,
         )
+    
+@utils_bp.get("/user/get_files/<int:id>")
+@swag_from(
+    {
+        "tags": ["Utils"],
+        "description": "此API 用獲取使用者已訓練過的檔案名稱或是未訓練過的檔案名稱",
+        "parameters": [
+            {
+                "name": "id",
+                "in": "path",
+                "type": "string",
+                "required": True,
+                "description": "User id ",
+            },
+        ],
+        "responses": {
+            "200": {
+                "description": "File retrieved successfully",
+                "examples": {
+                    "application/json": {"message": "File retrieved successfully"}
+                },
+            },
+            "400": {
+                "description": "Bad request due to missing file or wrong file type",
+                "examples": {
+                    "application/json": {"error": "No file part in the request"}
+                },
+            },
+            "403": {
+                "description": "Forbidden request",
+                "examples": {"application/json": {"error": "Forbidden"}},
+            },
+            "500": {
+                "description": "Internal Error",
+                "examples": {"application/json": {"error": "Internal Server Error"}},
+            },
+        },
+    }
+)
+def get_files(id):
+   
+    user_id = id
+    trained_files = TrainingFileRepo.find_trained_file_by_user_id(user_id)
+    not_trained_files = TrainingFileRepo.find_not_trained_file_by_user_id(user_id)
+    
+    trained_files = [file.filename for file in trained_files]
+    not_trained_files = [file.filename for file in not_trained_files]
+    return jsonify({"trained_file_name": trained_files},{"not_trained_file_name": not_trained_files}), 200
