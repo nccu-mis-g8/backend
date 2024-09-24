@@ -6,6 +6,8 @@ import json
 import traceback
 import time
 
+from flask_sqlalchemy import model
+
 from repository.trainedmodel_repo import TrainedModelRepo
 from repository.trainingfile_repo import TrainingFileRepo
 from service.utils_controller import FILE_DIRECTORY
@@ -79,28 +81,30 @@ def train_model():
         #         jsonify({"status": "no file to train"}),
         #         400,
         #     )
-        train_config = None
         saved_model = TrainedModelRepo.find_trainedmodel_by_user_id(user_id)
         new_model = None
         # 如果是第一次練就生成new_model
+        model_id = None
         if saved_model is None:
             print("第一次訓練")
             new_model = TrainedModelRepo.create_trainedmodel(user_id)
+            model_id = str(new_model.id)
             if new_model is None:
                 return jsonify({"status": "Error", "message": "Internel Error"}), 500
 
             train(
-                str(new_model.id),
+                model_id,
                 BASE_MODEL_DIR,
                 str(os.path.join("..\\saved_models", new_model.modelname)),
                 os.path.join(FILE_DIRECTORY, merged_file),
             )
 
         else:
-            print("接續舊的model繼續訓練")
+            model_id = str(saved_model.id)
+            print(f"接續舊的model: {model_id} 繼續訓練")
             # 已經練過了，接續之前練過的model再訓練
             train(
-                str(saved_model.id),
+                model_id,
                 str(os.path.join("..\\saved_models", saved_model.modelname)),
                 str(os.path.join("..\\saved_models", saved_model.modelname)),
                 os.path.join(FILE_DIRECTORY, merged_file),
@@ -118,9 +122,7 @@ def train_model():
         except Exception as e:
             logging.error(f"{e}")
         return (
-            jsonify(
-                {"status": "Training started successfully", "config": train_config}
-            ),
+            jsonify({"status": f"Training started successfully. Model id: {model_id}"}),
             200,
         )
     except Exception as e:
