@@ -79,7 +79,7 @@ def train(config: LLMTrainingArg):
     peft_args = LoraConfig(
         lora_alpha=16,
         lora_dropout=0.05,
-        lora_r=8,
+        r=8,
         bias="none",
         task_type="CAUSAL_LM",
     )
