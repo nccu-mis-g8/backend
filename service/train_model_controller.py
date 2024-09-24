@@ -95,7 +95,7 @@ def train_model():
             output_dir = str(os.path.join("../saved_models", new_model.modelname))
             create_dir(output_dir)
             train_config = LLMTrainingArg(
-                model_dir="./train_model/saved-taide-model",
+                model_dir=None,
                 saved_model_dir=str(
                     os.path.join("../saved_models", new_model.modelname)
                 ),

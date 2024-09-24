@@ -1,3 +1,4 @@
+import os
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
@@ -19,6 +20,8 @@ import pandas as pd
 import torch
 
 CUTOFF_LEN = 512
+
+BASE_MODEL_DIR = "./train_model/saved-taide-model"
 
 
 def tokenize(tokenizer, prompt, add_eos_token=True):
@@ -58,8 +61,11 @@ def train(config: LLMTrainingArg):
         bnb_4bit_use_double_quant=True,
         bnb_4bit_compute_dtype=torch.bfloat16,
     )
+    model_dir = config.model_dir
+    if model_dir is None:
+        model_dir = BASE_MODEL_DIR
     tokenizer = AutoTokenizer.from_pretrained(
-        config.model_dir,
+        model_dir,
         add_eos_token=True,
         # 不要傳quantization_config，否則會報錯
         # quantization_config=nf4_config
@@ -87,10 +93,9 @@ def train(config: LLMTrainingArg):
     training_arg = SFTConfig(
         output_dir=config.output_dir,
         num_train_epochs=3,
-        per_device_train_batch_size=2,
+        per_device_train_batch_size=4,
         gradient_accumulation_steps=2,
         # optim="paged_adamw_32bit",
-        # learning_rate=3e-5,  # 中等學習率
         learning_rate=3e-4,
         # fp16=False,
         fp16=True,

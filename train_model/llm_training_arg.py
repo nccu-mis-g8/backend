@@ -1,6 +1,13 @@
+from typing import Optional
+
+
 class LLMTrainingArg:
     def __init__(
-        self, model_dir: str, saved_model_dir: str, output_dir: str, data_path: str
+        self,
+        model_dir: Optional[str],
+        saved_model_dir: str,
+        output_dir: str,
+        data_path: str,
     ):
         self.model_dir = model_dir
         self.saved_model_dir = saved_model_dir
