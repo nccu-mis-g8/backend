@@ -75,6 +75,7 @@ def train_model():
         ]
         # merged_file是所有user上傳的file合成的訓練資料
         # TODO: 暫時把file寫死
+        merged_file = ""
         # merged_file = merge_csv_files(files_path)
         # if merged_file is None:
         #     return (
