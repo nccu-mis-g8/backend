@@ -74,7 +74,13 @@ def train_model():
             os.path.join(FILE_DIRECTORY, f.filename) for f in not_trained_files
         ]
         # merged_file是所有user上傳的file合成的訓練資料
-        merged_file = merge_csv_files(files_path)
+        # TODO: 暫時把file寫死
+        # merged_file = merge_csv_files(files_path)
+        # if merged_file is None:
+        #     return (
+        #         jsonify({"status": "no file to train"}),
+        #         400,
+        #     )
         train_config = None
         saved_model = TrainedModelRepo.find_trainedmodel_by_user_id(user_id)
         new_model = None
