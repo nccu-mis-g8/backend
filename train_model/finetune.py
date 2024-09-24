@@ -5,7 +5,7 @@ from transformers import (
 )
 from trl import SFTConfig, SFTTrainer
 
-from train_model.llm_training_arg import LLMTrainingArg
+
 from peft import (
     LoraConfig,
     get_peft_model,
