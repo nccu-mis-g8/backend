@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 # only allow to upload csv file
 ALLOWED_EXTENSIONS = set(["csv"])
-FILE_DIRECTORY = "../training_file"
+FILE_DIRECTORY = "..\\training_file"
 
 
 def allowed_file(filename):

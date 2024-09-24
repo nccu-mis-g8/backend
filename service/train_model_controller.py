@@ -92,7 +92,7 @@ def train_model():
             train(
                 str(new_model.id),
                 BASE_MODEL_DIR,
-                str(os.path.join("../saved_models", new_model.modelname)),
+                str(os.path.join("..\\saved_models", new_model.modelname)),
                 os.path.join(FILE_DIRECTORY, merged_file),
             )
 
@@ -101,8 +101,8 @@ def train_model():
             # 已經練過了，接續之前練過的model再訓練
             train(
                 str(saved_model.id),
-                str(os.path.join("../saved_models", saved_model.modelname)),
-                str(os.path.join("../saved_models", saved_model.modelname)),
+                str(os.path.join("..\\saved_models", saved_model.modelname)),
+                str(os.path.join("..\\saved_models", saved_model.modelname)),
                 os.path.join(FILE_DIRECTORY, merged_file),
             )
 
