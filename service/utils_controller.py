@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 # only allow to upload csv file
 ALLOWED_EXTENSIONS = set(["csv"])
+FILE_DIRECTORY = "..\\training_file"
 
 
 def allowed_file(filename):
@@ -23,52 +24,50 @@ def allowed_file(filename):
 
 
 @utils_bp.post("/user/upload_file")
-@swag_from({
-    'tags': ['Utils'],
-    'description': '此API 用於上傳 CSV 檔案',
-    'parameters': [
-        {
-            'name': 'user_info',
-            'in': 'formData',
-            'type': 'string',
-            'required': True,
-            'description': 'User information in JSON format'
+@swag_from(
+    {
+        "tags": ["Utils"],
+        "description": "此API 用於上傳 CSV 檔案",
+        "parameters": [
+            {
+                "name": "user_info",
+                "in": "formData",
+                "type": "string",
+                "required": True,
+                "description": "User information in JSON format",
+            },
+            {
+                "name": "file",
+                "in": "formData",
+                "type": "file",
+                "required": True,
+                "description": "The CSV file to upload",
+            },
+        ],
+        "responses": {
+            "200": {
+                "description": "File uploaded successfully",
+                "examples": {
+                    "application/json": {"message": "File uploaded successfully"}
+                },
+            },
+            "400": {
+                "description": "Bad request due to missing file or wrong file type",
+                "examples": {
+                    "application/json": {"error": "No file part in the request"}
+                },
+            },
+            "403": {
+                "description": "Forbidden request",
+                "examples": {"application/json": {"error": "Forbidden"}},
+            },
+            "500": {
+                "description": "Internal Error",
+                "examples": {"application/json": {"error": "Internal Server Error"}},
+            },
         },
-        {
-            'name': 'file',
-            'in': 'formData',
-            'type': 'file',
-            'required': True,
-            'description': 'The CSV file to upload'
-        }
-    ],
-    'responses': {
-        '200': {
-            'description': 'File uploaded successfully',
-            'examples': {
-                'application/json': {
-                    'message': 'File uploaded successfully'
-                }
-            }
-        },
-        '400': {
-            'description': 'Bad request due to missing file or wrong file type',
-            'examples': {
-                'application/json': {
-                    'error': 'No file part in the request'
-                }
-            }
-        },
-        '403': {
-            'description': 'Forbidden request',
-            'examples': {
-                'application/json': {
-                    'error': 'Forbidden'
-                }
-            }
-        }
     }
-})
+)
 def upload_file():
     user_info = request.form.get("user_info")
     if user_info:
@@ -78,7 +77,7 @@ def upload_file():
 
     # 獲取 userId
     user_id = user_info.get("user_Id")
-    
+
     # 確認 request 中是否有檔案
     if "file" not in request.files:
         return jsonify({"error": "No file part in the request"}), 400
@@ -91,15 +90,19 @@ def upload_file():
 
     # 確認檔案類型是否為 csv
     if file and allowed_file(file.filename):
-        
-         # 確認目錄是否存在，若不存在則創建目錄
-        file_directory = "../training_file"
-        if not os.path.exists(file_directory):
-            os.makedirs(file_directory)
-            
+        # 確認目錄是否存在，若不存在則創建目錄
+
+        if not os.path.exists(FILE_DIRECTORY):
+            os.makedirs(FILE_DIRECTORY)
+
         # 儲存檔案
-        saved_file = TrainingFileRepo.create_trainingfile(user_id)
-        file.save(os.path.join(file_directory, saved_file.filename))
+        saved_file = TrainingFileRepo.create_trainingfile(user_id, file.filename)
+        if saved_file is None:
+            return (
+                jsonify({"error": "Unable to create file."}),
+                500,
+            )
+        file.save(os.path.join(FILE_DIRECTORY, saved_file.filename))
         return jsonify({"message": "File uploaded successfully"}), 200
     else:
         return (

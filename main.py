@@ -52,9 +52,9 @@ app.register_blueprint(utils_bp, url_prefix="/utils")
 app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
 
 # define table
-# @app.before_request
-# def create_tables():
-#     db.create_all()
+@app.before_request
+def create_tables():
+    db.create_all()
 
 if __name__ == "__main__":
     app.run(debug=True)
