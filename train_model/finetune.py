@@ -121,7 +121,8 @@ def train(id: str, model_dir: str, save_dir: str, data_path: str):
     # dataset = datasets.Dataset.from_pandas(pd.read_csv(config.data_path).head(100))
     # NOTE: 暫時把file寫死
     dataset = datasets.Dataset.from_pandas(
-        pd.read_csv("C:/Users/User/Desktop/train_data.csv").head(100)
+        # pd.read_csv("C:/Users/User/Desktop/train_data.csv").head(100)
+        pd.read_csv(data_path).head(100)
     )
     train_data = dataset.map(generate_and_tokenize_prompt)
     print("start training")

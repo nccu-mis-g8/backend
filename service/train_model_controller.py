@@ -6,7 +6,6 @@ import json
 import traceback
 import time
 
-from flask_sqlalchemy import model
 
 from repository.trainedmodel_repo import TrainedModelRepo
 from repository.trainingfile_repo import TrainingFileRepo
@@ -15,6 +14,7 @@ from train_model.finetune import BASE_MODEL_DIR, train
 from concurrent.futures import TimeoutError
 from requests.exceptions import RequestException
 import os
+from utils.merge_csv_files import merge_csv_files
 from utils.create_dir import create_dir
 
 
@@ -73,14 +73,13 @@ def train_model():
             os.path.join(FILE_DIRECTORY, f.filename) for f in not_trained_files
         ]
         # merged_file是所有user上傳的file合成的訓練資料
-        # TODO: 暫時把file寫死
-        merged_file = ""
-        # merged_file = merge_csv_files(files_path)
-        # if merged_file is None:
-        #     return (
-        #         jsonify({"status": "no file to train"}),
-        #         400,
-        #     )
+        # merged_file = ""
+        merged_file = merge_csv_files(files_path)
+        if merged_file is None:
+            return (
+                jsonify({"status": "no file to train"}),
+                400,
+            )
         saved_model = TrainedModelRepo.find_trainedmodel_by_user_id(user_id)
         new_model = None
         # 如果是第一次練就生成new_model
