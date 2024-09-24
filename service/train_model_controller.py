@@ -9,14 +9,11 @@ import time
 from repository.trainedmodel_repo import TrainedModelRepo
 from repository.trainingfile_repo import TrainingFileRepo
 from service.utils_controller import FILE_DIRECTORY
-from train_model.finetune import train
+from train_model.finetune import BASE_MODEL_DIR, train
 from concurrent.futures import TimeoutError
 from requests.exceptions import RequestException
 import os
-
-from train_model.llm_training_arg import LLMTrainingArg
 from utils.create_dir import create_dir
-from utils.merge_csv_files import merge_csv_files
 
 
 train_model_bp = Blueprint("finetune", __name__)
@@ -92,30 +89,23 @@ def train_model():
             if new_model is None:
                 return jsonify({"status": "Error", "message": "Internel Error"}), 500
 
-            output_dir = str(os.path.join("../saved_models", new_model.modelname))
-            create_dir(output_dir)
-            train_config = LLMTrainingArg(
-                model_dir=None,
-                saved_model_dir=str(
-                    os.path.join("../saved_models", new_model.modelname)
-                ),
-                output_dir=output_dir,
-                data_path=os.path.join(FILE_DIRECTORY, merged_file),
+            train(
+                str(new_model.id),
+                BASE_MODEL_DIR,
+                str(os.path.join("../saved_models", new_model.modelname)),
+                os.path.join(FILE_DIRECTORY, merged_file),
             )
+
         else:
             print("接續舊的model繼續訓練")
-            output_dir = str(os.path.join("../saved_models", saved_model.modelname))
             # 已經練過了，接續之前練過的model再訓練
-            train_config = LLMTrainingArg(
-                model_dir=str(os.path.join("../saved_models", saved_model.modelname)),
-                saved_model_dir=str(
-                    os.path.join("../saved_models", saved_model.modelname)
-                ),
-                output_dir=output_dir,
-                data_path=os.path.join(FILE_DIRECTORY, merged_file),
+            train(
+                str(saved_model.id),
+                str(os.path.join("../saved_models", saved_model.modelname)),
+                str(os.path.join("../saved_models", saved_model.modelname)),
+                os.path.join(FILE_DIRECTORY, merged_file),
             )
-        # 全部的file一次載入並訓練
-        train(train_config)
+
         if new_model is not None:
             TrainedModelRepo.save_trainedmodel(new_model)
         # train完成後要做的事

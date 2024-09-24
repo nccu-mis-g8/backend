@@ -1,10 +1,7 @@
-import os
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
     BitsAndBytesConfig,
-    Trainer,
-    TrainingArguments,
 )
 from trl import SFTConfig, SFTTrainer
 
@@ -53,7 +50,7 @@ def generate_prompt(data_point):
     )
 
 
-def train(config: LLMTrainingArg):
+def train(id: str, model_dir: str, save_dir: str, data_path: str):
     device_map = "auto" if torch.cuda.is_available() else "cpu"
     nf4_config = BitsAndBytesConfig(
         load_in_4bit=True,
@@ -61,9 +58,6 @@ def train(config: LLMTrainingArg):
         bnb_4bit_use_double_quant=True,
         bnb_4bit_compute_dtype=torch.bfloat16,
     )
-    model_dir = config.model_dir
-    if model_dir is None:
-        model_dir = BASE_MODEL_DIR
     tokenizer = AutoTokenizer.from_pretrained(
         model_dir,
         add_eos_token=True,
@@ -73,7 +67,7 @@ def train(config: LLMTrainingArg):
     tokenizer.pad_token = tokenizer.eos_token
 
     model = AutoModelForCausalLM.from_pretrained(
-        config.model_dir,
+        model_dir,
         device_map=device_map,
         quantization_config=nf4_config,
     )
@@ -91,7 +85,7 @@ def train(config: LLMTrainingArg):
     )
 
     training_arg = SFTConfig(
-        output_dir=config.output_dir,
+        output_dir=f"./ouput/{id}",
         num_train_epochs=3,
         per_device_train_batch_size=4,
         gradient_accumulation_steps=2,
@@ -129,7 +123,7 @@ def train(config: LLMTrainingArg):
     # dataset = datasets.Dataset.from_pandas(pd.read_csv(config.data_path).head(100))
     # NOTE: 暫時把file寫死
     dataset = datasets.Dataset.from_pandas(
-        pd.read_csv("C:/Users/User/Desktop/train_data.csv").head(2000)
+        pd.read_csv("C:/Users/User/Desktop/train_data.csv").head(100)
     )
     train_data = dataset.map(generate_and_tokenize_prompt)
     print("start training")
@@ -145,4 +139,4 @@ def train(config: LLMTrainingArg):
     print("Starting training...")
     trainer.train()
     print("Saving model...")
-    model.save_pretrained(config.saved_model_dir)
+    model.save_pretrained(save_dir)
