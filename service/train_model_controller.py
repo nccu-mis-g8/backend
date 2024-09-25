@@ -6,7 +6,7 @@ import json
 import traceback
 import time
 
-
+from sqlalchemy.sql.functions import user
 from repository.trainedmodel_repo import TrainedModelRepo
 from repository.trainingfile_repo import TrainingFileRepo
 from service.utils_controller import FILE_DIRECTORY
@@ -14,8 +14,6 @@ from train_model.finetune import BASE_MODEL_DIR, train
 from concurrent.futures import TimeoutError
 from requests.exceptions import RequestException
 import os
-from utils.merge_csv_files import merge_csv_files
-from utils.create_dir import create_dir
 
 
 train_model_bp = Blueprint("finetune", __name__)
@@ -65,63 +63,53 @@ def train_model():
     # 獲取 userId
     user_id = user_info.get("user_Id")
     try:
-        # 取得user還沒train過的file
-        not_trained_files = TrainingFileRepo.find_not_trained_file_by_user_id(
-            user_id=user_id
+        # 取得user要train的file
+        training_file = TrainingFileRepo.find_first_training_file_by_user_id(
+            user_id=user
         )
-        files_path = [
-            os.path.join(FILE_DIRECTORY, f.filename) for f in not_trained_files
-        ]
-        # merged_file是所有user上傳的file合成的訓練資料
-        # merged_file = ""
-        merged_file = merge_csv_files(files_path)
-        if merged_file is None:
+        if training_file is None:
             return (
                 jsonify({"status": "no file to train"}),
                 400,
             )
-        saved_model = TrainedModelRepo.find_trainedmodel_by_user_id(user_id)
-        new_model = None
-        # 如果是第一次練就生成new_model
-        model_id = None
-        if saved_model is None:
-            print("第一次訓練")
-            new_model = TrainedModelRepo.create_trainedmodel(user_id)
-            model_id = str(new_model.id)
-            if new_model is None:
-                return jsonify({"status": "Error", "message": "Internel Error"}), 500
+        file_path = os.path.join(FILE_DIRECTORY, training_file.filename)
 
+        if not os.path.exists(file_path):
+            return (
+                jsonify({"status": "no file to train"}),
+                400,
+            )
+
+        saved_models = TrainedModelRepo.find_all_trainedmodel_by_user_id(user_id)
+        new_model = TrainedModelRepo.create_trainedmodel(user_id)
+        if new_model is None:
+            return jsonify({"status": "Error", "message": "Internel Error"}), 500
+        # 如果是第一次
+        if len(saved_models) == 0:
+            print("第一次訓練")
             train(
-                model_id,
+                str(new_model.id),
                 BASE_MODEL_DIR,
                 str(os.path.join("..\\saved_models", new_model.modelname)),
-                os.path.join(FILE_DIRECTORY, merged_file),
+                os.path.join(FILE_DIRECTORY, file_path),
             )
-
         else:
-            model_id = str(saved_model.id)
-            print(f"接續舊的model: {model_id} 繼續訓練")
+            last_model = saved_models[-1]
+            print(f"接續舊的model: {last_model.id} 繼續訓練")
             # 已經練過了，接續之前練過的model再訓練
             train(
-                model_id,
-                str(os.path.join("..\\saved_models", saved_model.modelname)),
-                str(os.path.join("..\\saved_models", saved_model.modelname)),
-                os.path.join(FILE_DIRECTORY, merged_file),
+                str(new_model.id),
+                str(os.path.join("..\\saved_models", last_model.modelname)),
+                str(os.path.join("..\\saved_models", new_model.modelname)),
+                os.path.join(FILE_DIRECTORY, file_path),
             )
 
-        if new_model is not None:
-            TrainedModelRepo.save_trainedmodel(new_model)
-        # train完成後要做的事
         # 把拿去train的資料is_trained設成true
-        for f in not_trained_files:
-            TrainingFileRepo.update_is_trained(f, True)
-        # 刪掉合成的merged_file
-        try:
-            os.remove(os.path.join(FILE_DIRECTORY, merged_file))
-        except Exception as e:
-            logging.error(f"{e}")
+        TrainingFileRepo.update_is_trained(training_file, True)
         return (
-            jsonify({"status": f"Training started successfully. Model id: {model_id}"}),
+            jsonify(
+                {"status": f"Training started successfully. Model id: {new_model.id}"}
+            ),
             200,
         )
     except Exception as e:

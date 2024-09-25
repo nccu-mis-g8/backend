@@ -14,7 +14,7 @@ class TrainingFileRepo:
             return file
         except Exception as e:
             db.session.rollback()
-            logging.error(f"Error creating TrainedModel for user {user_id}: {e}")
+            logging.error(f"Error creating training_file for user {user_id}: {e}")
             return None
 
     @staticmethod
@@ -27,13 +27,26 @@ class TrainingFileRepo:
 
     # 取得已訓練的file
     @staticmethod
-    def find_trained_file_by_user_id(user_id) -> List[TrainingFile]:
+    def find_training_file_by_user_id(user_id) -> List[TrainingFile]:
         return TrainingFile.query.filter_by(user_id=user_id, is_trained=True).all()
 
     # 取得未訓練的file
     @staticmethod
-    def find_not_trained_file_by_user_id(user_id) -> List[TrainingFile]:
+    def find_not_training_file_by_user_id(user_id) -> List[TrainingFile]:
         return TrainingFile.query.filter_by(user_id=user_id, is_trained=False).all()
+
+    @staticmethod
+    def find_first_training_file_by_user_id(user_id) -> Optional[TrainingFile]:
+        return TrainingFile.query.filter_by(user_id=user_id).first()
+
+    @staticmethod
+    def delete_training_file_by_file_id(file_id):
+        TrainingFile.query.filter_by(id=file_id).delete()
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            logging.error(f"Error delete training_file for file {file_id}: {e}")
 
     @staticmethod
     def update_is_trained(

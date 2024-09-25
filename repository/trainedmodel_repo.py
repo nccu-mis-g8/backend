@@ -1,4 +1,6 @@
-from typing import List, Optional
+from typing import List
+
+from sqlalchemy import desc
 
 from models.trained_model import TrainedModel
 from extensions import db
@@ -8,17 +10,19 @@ import logging
 class TrainedModelRepo:
     @staticmethod
     def create_trainedmodel(user_id) -> TrainedModel:
-        return TrainedModel(user_id=user_id)
+        model = TrainedModel(user_id=user_id, end_time=None)
+        db.session.add(model)
+        TrainedModelRepo.save()
+        return model
 
     @staticmethod
-    def save_trainedmodel(model: TrainedModel) -> Optional[TrainedModel]:
-        db.session.add(model)
+    def save() -> bool:
         try:
             db.session.commit()
-            return model
+            return True
         except Exception as e:
             db.session.rollback()
-            logging.error(f"Error creating TrainedModel for user {model.user_id}: {e}")
+            return False
 
     @staticmethod
     def get_all_trainedmodel() -> List[TrainedModel]:
@@ -30,4 +34,8 @@ class TrainedModelRepo:
 
     @staticmethod
     def find_all_trainedmodel_by_user_id(user_id: int) -> List[TrainedModel]:
-        return TrainedModel.query.filter_by(user_id=user_id).all()
+        return (
+            TrainedModel.query.filter_by(user_id=user_id)
+            .order_by(TrainedModel.start_time)
+            .all()
+        )
