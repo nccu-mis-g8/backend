@@ -84,6 +84,8 @@ def train_model():
         new_model = TrainedModelRepo.create_trainedmodel(user_id)
         if new_model is None:
             return jsonify({"status": "Error", "message": "Internel Error"}), 500
+        training_file.start_train = True
+        TrainingFileRepo.save_training_file()
         # 如果是第一次
         if len(saved_models) == 0:
             print("第一次訓練")
@@ -105,7 +107,8 @@ def train_model():
             )
 
         # 把拿去train的資料is_trained設成true
-        TrainingFileRepo.update_is_trained(training_file, True)
+        training_file.is_trained = True
+        TrainingFileRepo.save_training_file()
         return (
             jsonify(
                 {"status": f"Training started successfully. Model id: {new_model.id}"}
