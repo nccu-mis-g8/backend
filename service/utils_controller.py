@@ -121,7 +121,7 @@ def upload_csv_file():
             400,
         )
 
-@utils_bp.post('/training_files')
+@utils_bp.post('/user/training_files')
 @swag_from({
     "tags": ["Utils"],
     'description': '此 api 用於拿到指定user_id 的 training file',
