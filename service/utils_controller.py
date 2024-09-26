@@ -8,7 +8,6 @@ import json
 import os
 import logging
 
-
 from repository.trainingfile_repo import TrainingFileRepo
 
 utils_bp = Blueprint("utils", __name__)
@@ -121,3 +120,92 @@ def upload_csv_file():
             jsonify({"error": "File type not allowed. Only CSV files are allowed."}),
             400,
         )
+
+@utils_bp.post('/training_files')
+@swag_from({
+    "tags": ["Utils"],
+    'description': '此 api 用於拿到指定user_id 的 training file',
+    'parameters': [
+        {
+            'name': 'user_id',
+            'in': 'body',
+            'type': 'integer',
+            'required': True,
+            'description': 'The ID of the user whose training file is being retrieved.',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'user_id': {
+                        'type': 'integer',
+                        'example': 1
+                    }
+                }
+            }
+        }
+    ],
+    'responses': {
+        '200': {
+            'description': 'A training file object for the user',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'id': {'type': 'integer', 'example': 1},
+                    'user_id': {'type': 'integer', 'example': 123},
+                    'filename': {'type': 'string', 'example': 'file.csv'},
+                    'original_file_name': {'type': 'string', 'example': 'my_file.csv'},
+                    'is_trained': {'type': 'boolean', 'example': False},
+                    'upload_time': {'type': 'string', 'example': '2024-09-26 15:30:00'}
+                }
+            }
+        },
+        '400': {
+            'description': 'user_id is missing',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'message': {'type': 'string', 'example': 'user_id is required'}
+                }
+            }
+        },
+        '404': {
+            'description': 'No training files found for this user',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'message': {'type': 'string', 'example': 'No training files found for this user.'}
+                }
+            }
+        },
+        '500': {
+            'description': 'Server error while fetching training files',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'message': {'type': 'string', 'example': 'An error occurred while fetching training files.'}
+                }
+            }
+        }
+    }
+})
+def get_user_training_files():
+    user_id = request.json.get('user_id')  # 取得 user_id
+
+    if not user_id:
+        return jsonify({"message": "user_id is required"}), 400
+
+    try:
+        training_file = TrainingFileRepo.find_first_training_file_by_user_id(user_id)
+        
+        if not training_file:
+            return jsonify({"message": "No training files found for this user."}), 404
+        
+    except Exception as e:
+        logging.error(f"Error retrieving training files for user {user_id}: {e}")
+        return jsonify({"message": "An error occurred while fetching training files."}), 500
+
+    return jsonify({"id": training_file.id,
+                    "user_id": training_file.user_id,
+                    "filename": training_file.filename,
+                    "original_file_name": training_file.original_file_name,
+                    "is_trained": training_file.is_trained,
+                    "upload_time": training_file.upload_time.strftime('%Y-%m-%d %H:%M:%S')}),200
