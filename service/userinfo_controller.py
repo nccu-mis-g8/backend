@@ -80,7 +80,7 @@ def upload_userinfo():
     if file.filename == "":
         return jsonify({"error": "No file provided"}), 400
 
-    # 確認檔案類型是否為 csv
+    # 確認檔案類型是否為 jpg, jpeg, png
     if file and allowed_file(file.filename, ["jpg", "jpeg", "png"]):
         # 確認目錄是否存在，若不存在則創建目錄
 
@@ -105,7 +105,12 @@ def upload_userinfo():
                 jsonify({"error": "Unable to create file."}),
                 500,
             )
-        file.save(os.path.join(FILE_DIRECTORY, saved_file.filename))
+        
+        user_folder = f'{FILE_DIRECTORY}/{user_id}'
+        if not os.path.exists(user_folder):
+            os.makedirs(user_folder)
+
+        file.save(os.path.join(user_folder, saved_file.filename))
         if is_renew:
             return jsonify({"message": "File update successfully"}), 200
         return jsonify({"message": "File uploaded successfully"}), 200
