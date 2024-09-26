@@ -16,7 +16,7 @@ FILE_DIRECTORY = "..\\user_info_file"
 def allowed_file(filename, extensions):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in extensions
 
-@userinfo_bp.post("/user/upload")
+@userinfo_bp.post("/user/upload_photo")
 @swag_from({
         "tags": ["UserInfo"],
         "description": "此API 用於上傳使用者頭貼 (JPG, JPEG, PNG)",
@@ -111,7 +111,7 @@ def upload_userinfo():
         return jsonify({"message": "File uploaded successfully"}), 200
     else:
         return (
-            jsonify({"error": "File type not allowed. Only CSV files are allowed."}),
+            jsonify({"error": "File type not allowed. Only png, jpg, jpeg files are allowed."}),
             400,
         )
 
