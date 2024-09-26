@@ -11,7 +11,7 @@ import os
 userinfo_bp = Blueprint("userinfo", __name__)
 logger = logging.getLogger(__name__)
 
-FILE_DIRECTORY = "..\\user_info_file"
+FILE_DIRECTORY = os.path.abspath("..\\user_info_file")
 
 def allowed_file(filename, extensions):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in extensions
@@ -60,17 +60,17 @@ def allowed_file(filename, extensions):
         },
     }
 )
-def upload_userinfo():
+def upload_photo():
     user_info = request.form.get("user_info")
     if user_info:
         user_info = json.loads(user_info)
     else:
         return jsonify({"error": "Forbidden"}), 403
 
-    # 獲取 userId
     user_id = user_info.get("user_Id")
+    if not user_id:
+        return jsonify({"error": "Invalid user ID"}), 400
 
-    # 確認 request 中是否有檔案
     if "file" not in request.files:
         return jsonify({"error": "No file part in the request"}), 400
 
@@ -82,37 +82,36 @@ def upload_userinfo():
 
     # 確認檔案類型是否為 jpg, jpeg, png
     if file and allowed_file(file.filename, ["jpg", "jpeg", "png"]):
+        
         # 確認目錄是否存在，若不存在則創建目錄
-
         if not os.path.exists(FILE_DIRECTORY):
             os.makedirs(FILE_DIRECTORY)
 
         current_file = UserInfoRepo.find_user_info_by_user_id(
             user_id=user_id
         )
-        is_renew = False  # 是否是覆蓋舊的
+        
+        user_folder = os.path.join(FILE_DIRECTORY, user_id)
+        
         # 上傳新的覆蓋舊的，把舊的file實體刪除
-        if current_file is not None:
-            os.remove(os.path.join(FILE_DIRECTORY, current_file.filename))
-            user_info = UserInfoRepo.delete_user_info_by_user_id(user_id)
-            is_renew = True
+        if current_file:
+            os.remove(os.path.join(user_folder, current_file.filename))
+            UserInfoRepo.delete_user_info_by_user_id(user_id)
+            
         # 儲存檔案
         saved_file = UserInfoRepo.create_user_info(
             user_id=user_id, filename=file.filename
         )
-        if saved_file is None:
+        if not saved_file:
             return (
                 jsonify({"error": "Unable to create file."}),
                 500,
             )
         
-        user_folder = f'{FILE_DIRECTORY}/{user_id}'
         if not os.path.exists(user_folder):
             os.makedirs(user_folder)
 
         file.save(os.path.join(user_folder, saved_file.filename))
-        if is_renew:
-            return jsonify({"message": "File update successfully"}), 200
         return jsonify({"message": "File uploaded successfully"}), 200
     else:
         return (
