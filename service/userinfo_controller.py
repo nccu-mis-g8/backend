@@ -5,7 +5,6 @@ import json
 
 from repository.userinfo_repo import UserInfoRepo
 from repository.userinfo_repo import UserInfoRepo
-from requests.exceptions import RequestException
 import os
 
 userinfo_bp = Blueprint("userinfo", __name__)
