@@ -65,7 +65,7 @@ def train_model():
     try:
         # 取得user要train的file
         training_file = TrainingFileRepo.find_first_training_file_by_user_id(
-            user_id=user
+            user_id=user_id
         )
         if training_file is None:
             return (
