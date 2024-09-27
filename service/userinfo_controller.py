@@ -1,4 +1,5 @@
-from flask import Blueprint, request, Response, jsonify
+import mimetypes
+from flask import Blueprint, request, Response, jsonify, send_file
 from flasgger import swag_from
 import logging
 import json
@@ -90,7 +91,7 @@ def upload_photo():
             user_id=user_id
         )
         
-        user_folder = os.path.join(FILE_DIRECTORY, user_id)
+        user_folder = os.path.join(FILE_DIRECTORY, str(user_id))
         
         # 上傳新的覆蓋舊的，把舊的file實體刪除
         if current_file:
@@ -118,3 +119,69 @@ def upload_photo():
             400,
         )
 
+
+@userinfo_bp.get("/user/retrieve_photo/<user_id>")
+@swag_from({
+        "tags": ["UserInfo"],
+        "description": "此API 用於拿取使用者頭貼 (JPG, JPEG, PNG)",
+        "parameters": [
+            {
+                "name": "user_id",
+                "in": "path",
+                "type": "string",
+                "required": True,
+                "description": "User information in JSON format",
+            },
+        ],
+        "responses": {
+            "200": {
+                "description": "File uploaded successfully",
+                "content": {
+                    "image/jpeg": {},
+                    "image/png": {},
+                    "image/jpg": {}
+                }
+            },
+            "400": {
+                "description": "Bad request due to missing file or wrong file type",
+                "examples": {
+                    "application/json": {"error": "No file part in the request"}
+                },
+            },
+            "403": {
+                "description": "Forbidden request",
+                "examples": {"application/json": {"error": "Forbidden"}},
+            },
+            "500": {
+                "description": "Internal Error",
+                "examples": {"application/json": {"error": "Internal Server Error"}},
+            },
+        },
+    }
+)
+def retrieve_photo(user_id):
+    
+    user_info = UserInfoRepo.find_user_info_by_user_id(user_id)
+
+    # 如果使用者頭像是 null，則回傳預設圖片
+    if not user_info:
+        default_image_path = os.path.join(FILE_DIRECTORY, "default_avatar.png")
+        if os.path.exists(default_image_path):
+            return send_file(default_image_path, mimetype="image/png")
+        else:
+            return jsonify({"error": "User or photo not found"}), 404
+
+    user_folder = os.path.join(FILE_DIRECTORY, user_id)
+    file_path = os.path.join(user_folder, user_info.filename)
+
+    # 檢查照片檔案是否存在
+    if not os.path.exists(file_path):
+        # 如果檔案不存在，也回傳預設圖片
+        default_image_path = os.path.join(FILE_DIRECTORY, "default_avatar.png")
+        if os.path.exists(default_image_path):
+            return send_file(default_image_path, mimetype="image/png")
+        else:
+            return jsonify({"error": "User or photo not found"}), 404
+
+    # 傳回使用者的圖片檔案
+    return send_file(file_path, mimetype=mimetypes.guess_type(file_path)[0])
