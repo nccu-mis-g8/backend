@@ -14,9 +14,9 @@ class TrainingFile(db.Model):
     upload_time = db.Column(DateTime(timezone=True), default=func.now())
 
     # 上傳file後先生成TrainingFile物件，再從TrainingFile object拿filename做為檔名存file。
-    def __init__(self, user_id, original_file_name):
+    def __init__(self, user_id, filename, original_file_name):
         self.user_id = user_id
-        self.filename = str(uuid.uuid4()) + ".csv"
+        self.filename = filename
         self.original_file_name = original_file_name
         self.is_trained = False
 
