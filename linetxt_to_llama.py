@@ -1,12 +1,13 @@
 import csv
 import os
+import uuid
 
 class LineChatProcessor:
     def __init__(self, output_name, master_name="", data_dir=""):
         self.master_name = master_name
         self.output_name = output_name
         self.data_dir = data_dir
-        self.output_file_name = f"{output_name}.csv"
+        self.output_file_name = f"{str(uuid.uuid4())}.csv"
         self.instructions_list = []
         self.inputs_list = []
         self.outputs_list = []
@@ -60,8 +61,7 @@ class LineChatProcessor:
             return
 
         block_title = "你是好友，也是大學同學。請以好友的回應回答對話。"
-        
-        # 確保輸出文件夾存在
+
         if not os.path.exists(self.data_dir):
             os.makedirs(self.data_dir, exist_ok=True)
         
