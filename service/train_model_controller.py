@@ -174,12 +174,9 @@ def chat():
         model_dir = str(os.path.join("..\\saved_models", trained_model.modelname))
         model = AutoModelForCausalLM.from_pretrained(model_dir)
         tokenizer = AutoTokenizer.from_pretrained(model_dir)
-    else:
-        # 如果找不到模型，返回錯誤
-        return jsonify({"error": "No trained model found for user"}), 404
-
-    def generate_text(prompt,max_length=70,num_return_sequences=1):
-        inputs = tokenizer(prompt,return_tensors='pt',truncation=True)
+    
+    def generate_text(prompt, max_length=70, num_return_sequences=1):
+        inputs = tokenizer(prompt, return_tensors="pt", truncation=True)
         input_ids = inputs["input_ids"]
 
         with torch.no_grad():
@@ -192,13 +189,16 @@ def chat():
                 num_return_sequences=num_return_sequences,
                 eos_token_id=tokenizer.eos_token_id
             )
-        generate_texts = [tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
-        return generate_texts
 
+        generated_texts = [tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
+        return generated_texts
+    
     try:
+
         input_text = request.form.get("input_text", "")
         if not input_text:
             return jsonify({"error": "Input text is required"}), 400
+        
         instruction = "你是我的朋友，請你以和過去回答相同的語氣與我聊天，注意回答的內容要符合問題。"
         prompt = f"{instruction}\nUser: {input_text}\nAssistant:"
 
@@ -220,7 +220,6 @@ def chat():
 
     except (RequestException, TimeoutError) as e:
         return jsonify({"error": "Error in generating response, please try again"}), 500
-
     except Exception as e:
         traceback.print_exc()
         return jsonify({"error": f"Internal server error: {str(e)}"}), 500
