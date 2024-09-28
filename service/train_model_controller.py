@@ -15,7 +15,7 @@ from service.utils_controller import FILE_DIRECTORY
 from train_model.finetune import BASE_MODEL_DIR, train
 from concurrent.futures import TimeoutError
 from requests.exceptions import RequestException
-from transformers import AutoTokenizer,AutoModelForCausalLM
+from transformers import AutoTokenizer,AutoModelForCausalLM,pipeline
 import os
 
 
@@ -174,24 +174,31 @@ def chat():
         model_dir = str(os.path.join("..\\saved_models", trained_model.modelname))
         model = AutoModelForCausalLM.from_pretrained(model_dir)
         tokenizer = AutoTokenizer.from_pretrained(model_dir)
+        pipe = pipeline(
+            "text-generation", 
+            model=model, 
+            tokenizer=tokenizer, 
+            torch_dtype=torch.bfloat16, 
+            device_map="auto"
+        )
     
-    def generate_text(prompt, max_length=70, num_return_sequences=1):
-        inputs = tokenizer(prompt, return_tensors="pt", truncation=True)
-        input_ids = inputs["input_ids"]
+    # def generate_text(prompt, max_length=70, num_return_sequences=1):
+    #     inputs = tokenizer(prompt, return_tensors="pt", truncation=True)
+    #     input_ids = inputs["input_ids"]
 
-        with torch.no_grad():
-            outputs = model.generate(
-                input_ids=input_ids,
-                do_sample=True,
-                max_length=max_length,
-                top_p=0.9,
-                temperature=0.7,
-                num_return_sequences=num_return_sequences,
-                eos_token_id=tokenizer.eos_token_id
-            )
+    #     with torch.no_grad():
+    #         outputs = model.generate(
+    #             input_ids=input_ids,
+    #             do_sample=True,
+    #             max_length=max_length,
+    #             top_p=0.9,
+    #             temperature=0.7,
+    #             num_return_sequences=num_return_sequences,
+    #             eos_token_id=tokenizer.eos_token_id
+    #         )
 
-        generated_texts = [tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
-        return generated_texts
+    #     generated_texts = [tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
+    #     return generated_texts
     
     try:
 
@@ -199,21 +206,26 @@ def chat():
         if not input_text:
             return jsonify({"error": "Input text is required"}), 400
         
-        instruction = "你是我的朋友，請你以和過去回答相同的語氣與我聊天，注意回答的內容要符合問題。"
-        prompt = f"{instruction}\nUser: {input_text}\nAssistant:"
+        chat = [
+            {"role":"system","content":"你是我的朋友，請你以和過去回答相同的語氣與我聊天，注意回答的內容要符合問題。"},
+            {"role":"user","content":f"{input_text}"},
+        ]
+
+        prompt = tokenizer.apply_chat_template(chat,tokenize=False,add_generation_prompt=True)
 
         generate_two_responses = random.random() < 0.5
         num_return_sequences = 2 if generate_two_responses else 1
-        generate_responses = generate_text(prompt, max_length=70, num_return_sequences=num_return_sequences)
-      
+        # generate_responses = generate_text(prompt, max_length=70, num_return_sequences=num_return_sequences)
+        generate_responses = pipe(prompt, max_new_tokens=256, do_sample=True, temperature=0.7, top_k=50, top_p=0.95, num_return_sequences=num_return_sequences)
+        
         if num_return_sequences == 2:
             response_data ={
-                "res1":generate_responses[0],
-                "res2":generate_responses[1],
+                "res1":generate_responses[0]["generated_text"],
+                "res2":generate_responses[1]["generated_text"],
                 "mes":"選擇您認為更好的回答"
             }
         else:
-            response_data = {"res":generate_responses[0]}
+            response_data = {"res":generate_responses[0]["generated_text"]}
 
         response = json.dumps(response_data, ensure_ascii=False)
         return Response(response, content_type="application/json; charset=utf-8")
