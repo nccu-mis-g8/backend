@@ -2,6 +2,8 @@ from flask import Blueprint, request, Response, jsonify
 from flasgger import swag_from
 import logging
 import json
+import torch
+import random
 
 import traceback
 import time
@@ -13,6 +15,7 @@ from service.utils_controller import FILE_DIRECTORY
 from train_model.finetune import BASE_MODEL_DIR, train
 from concurrent.futures import TimeoutError
 from requests.exceptions import RequestException
+from transformers import AutoTokenizer,AutoModelForCausalLM
 import os
 
 
@@ -166,42 +169,53 @@ def chat():
     user_id = user_info.get("user_Id")
     trained_model = TrainedModelRepo.find_trainedmodel_by_user_id(user_id=user_id)
     model_dir = BASE_MODEL_DIR
+
     if trained_model is not None:
         model_dir = str(os.path.join("..\\saved_models", trained_model.modelname))
+        model = AutoModelForCausalLM.from_pretrained(model_dir)
+        tokenizer = AutoTokenizer.from_pretrained(model_dir)
+    else:
+        # 如果找不到模型，返回錯誤
+        return jsonify({"error": "No trained model found for user"}), 404
+
+    def generate_text(prompt,max_length=70,num_return_sequences=1):
+        inputs = tokenizer(prompt,return_tensors='pt',truncation=True)
+        input_ids = inputs["input_ids"]
+
+        with torch.no_grad():
+            outputs = model.generate(
+                input_ids=input_ids,
+                do_sample=True,
+                max_length=max_length,
+                top_p=0.9,
+                temperature=0.7,
+                num_return_sequences=num_return_sequences,
+                eos_token_id=tokenizer.eos_token_id
+            )
+        generate_texts = [tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
+        return generate_texts
+
     try:
-        input_text = request.json.get("input_text", "")
+        input_text = request.form.get("input_text", "")
         if not input_text:
             return jsonify({"error": "Input text is required"}), 400
         instruction = "你是我的朋友，請你以和過去回答相同的語氣與我聊天，注意回答的內容要符合問題。"
-        full_input = [
-            {"role": "system", "content": instruction},
-            {"role": "user", "content": input_text},
-        ]
+        prompt = f"{instruction}\nUser: {input_text}\nAssistant:"
 
-        start_time = time.time()
-        sequences = generator(
-            full_input,
-            do_sample=True,
-            top_p=0.9,
-            temperature=0.7,
-            num_return_sequences=1,
-            eos_token_id=tokenizer.eos_token_id,
-            # max_new_tokens=50,
-            max_length=70,
-            # truncation=True,
-        )
+        generate_two_responses = random.random() < 0.5
+        num_return_sequences = 2 if generate_two_responses else 1
+        generate_responses = generate_text(prompt, max_length=70, num_return_sequences=num_return_sequences)
+      
+        if num_return_sequences == 2:
+            response_data ={
+                "res1":generate_responses[0],
+                "res2":generate_responses[1],
+                "mes":"選擇您認為更好的回答"
+            }
+        else:
+            response_data = {"res":generate_responses[0]}
 
-        # 之後會改小
-        if time.time() - start_time > 3000:
-            return jsonify({"error": "Request timeout, please try again"}), 504
-
-        generated_text = ""
-        for message in sequences[0]["generated_text"]:
-            if message["role"] == "assistant":
-                generated_text = message["content"]
-                break
-
-        response = json.dumps({"response": generated_text}, ensure_ascii=False)
+        response = json.dumps(response_data, ensure_ascii=False)
         return Response(response, content_type="application/json; charset=utf-8")
 
     except (RequestException, TimeoutError) as e:
