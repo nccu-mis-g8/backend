@@ -75,18 +75,15 @@ class LineChatProcessor:
             for i in range(len(instructions_list)):
                 writer.writerow(
                     {
-                        "instruction": self.instructions_list[i],
-                        "input": "",
-                        "output": self.outputs_list[i],
-                        "text": block_title,
+                        "input": instructions_list[i],
+                        "output": outputs_list[i],
+                        "instruction": block_title,
                     }
                 )
 
-        # return output_file_path  
         return self.output_file_name
 
     
-    def process(self, file_stream):
-        # 處理文件並生成 CSV 文件
-        self.create_formatted_content(file_stream)
+    def process(self, file):
+        self.create_formatted_content(file)
         return self.output_file(self.instructions_list, self.inputs_list, self.outputs_list)
