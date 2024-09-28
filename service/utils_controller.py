@@ -212,6 +212,89 @@ def get_user_training_files():
                     "upload_time": training_file.upload_time.strftime('%Y-%m-%d %H:%M:%S')}),200
     
 @utils_bp.post('/user/upload_txt_file')
+@swag_from({
+    "tags": ["Utils"],
+    'description': '此 api 用於上傳 txt file，然後轉為 csv fil儲存',
+    'parameters': [
+        {
+            'name': 'user_info',
+            'in': 'formData',
+            'description': 'JSON string containing user_Id and master_name',
+            'required': True,
+            'type': 'string',
+            'example': '{"user_Id": "12345", "master_name": "John"}'
+        },
+        {
+            'name': 'file',
+            'in': 'formData',
+            'description': 'TXT file to be uploaded',
+            'required': True,
+            'type': 'file'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'File uploaded successfully',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'message': {
+                        'type': 'string',
+                        'example': 'File uploaded successfully'
+                    }
+                }
+            }
+        },
+        400: {
+            'description': 'Bad request',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'error': {
+                        'type': 'string',
+                        'example': 'user_Id or master_name is missing'
+                    }
+                }
+            }
+        },
+        403: {
+            'description': 'Forbidden: User info is missing',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'error': {
+                        'type': 'string',
+                        'example': 'Forbidden'
+                    }
+                }
+            }
+        },
+        404: {
+            'description': 'File not found',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'error': {
+                        'type': 'string',
+                        'example': 'File not found: /path/to/file'
+                    }
+                }
+            }
+        },
+        500: {
+            'description': 'Internal server error',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'error': {
+                        'type': 'string',
+                        'example': 'File processing error: error message'
+                    }
+                }
+            }
+        }
+    }
+})
 def upload_txt_file():
     user_info = request.form.get("user_info")
     
