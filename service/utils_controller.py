@@ -249,8 +249,8 @@ def upload_txt_file():
         # 處理 line chat 的文件
         processor = linetxt_to_llama.LineChatProcessor(output_name=user_id, master_name=master_name, data_dir=FILE_DIRECTORY)
         try:
-            origin_csv_file_name = processor.process(file)  # 假設 process 方法需要文件來處理
-            print(origin_csv_file_name)
+            csv_file_name = processor.process(file)  # 假設 process 方法需要文件來處理
+            print(csv_file_name)
         except Exception as e:
             return jsonify({"error": f"File processing error: {str(e)}"}), 500
 
