@@ -270,11 +270,9 @@ def upload_txt_file():
                 return jsonify({"error": f"Error deleting old file: {str(e)}"}), 500
 
         # 儲存檔案
-        saved_file = TrainingFileRepo.create_trainingfile(user_id=user_id, original_file_name=origin_csv_file_name)
+        saved_file = TrainingFileRepo.create_trainingfile(user_id=user_id, filename=csv_file_name, original_file_name=file.filename)
         if saved_file is None:
             return jsonify({"error": "Unable to create file."}), 500
-
-        file.save(os.path.join(FILE_DIRECTORY, saved_file.filename))
 
         return jsonify({"message": "File uploaded successfully"}), 200
     else:
