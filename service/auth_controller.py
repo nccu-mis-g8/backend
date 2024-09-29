@@ -339,7 +339,7 @@ def login():
 
     Steps:
     1. 使用裝飾器 `@jwt_required(refresh=True)` 驗證請求中的 Refresh Token。
-    2. 獲取當前用戶的身份（即 `current_account`）。
+    2. 獲取當前用戶的身份（即 `current_email`）。
     3. 為當前用戶生成新的 Access Token。
     4. 返回新的 Access Token 給客戶端。
 
