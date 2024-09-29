@@ -123,6 +123,7 @@ def train_model():
         return jsonify({"status": "Error", "message": str(e)}), 500
 
 @train_model_bp.post("/chat")
+@train_model_bp.post("/chat")
 def chat():
     user_info = request.form.get("user_info")
     if user_info:
@@ -140,10 +141,8 @@ def chat():
         if not os.path.exists(model_dir):
             return jsonify({"error": "Model directory not found"}), 404
 
-        model = AutoModelForCausalLM.from_pretrained(
-            model_dir,
-            device_map="auto",
-        )
+        # 加載模型和 tokenizer
+        model = AutoModelForCausalLM.from_pretrained(model_dir)
         model = PeftModel.from_pretrained(model, model_dir)
         tokenizer = AutoTokenizer.from_pretrained(model_dir)
     
@@ -151,24 +150,25 @@ def chat():
         input_text = request.form.get("input_text", "")
         if not input_text:
             return jsonify({"error": "Input text is required"}), 400
-        
+
+        # 設置設備
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        # 確保模型移動到正確的設備
+        model.to(device)
+
         chat = [
             {"role": "system", "content": "你是我的朋友，請你以和過去回答相同的語氣與我聊天，注意回答的內容要符合問題。"},
             {"role": "user", "content": f"{input_text}"},
         ]
 
-        
         prompt = tokenizer.apply_chat_template(chat, tokenize=False, add_generation_prompt=True)
 
-        
         inputs = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True, max_length=256)
-
-        
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         input_ids = inputs["input_ids"].to(device)
         attention_mask = inputs["attention_mask"].to(device)
 
-       
+        # 決定是否生成兩個回應
         generate_two_responses = random.random() < 0.5
         num_return_sequences = 2 if generate_two_responses else 1
 
@@ -182,10 +182,9 @@ def chat():
             temperature=0.7,
             num_return_sequences=num_return_sequences
         )
-       
+
         generated_texts = [tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
 
-        # 根據返回序列數返回對應的回應
         if num_return_sequences == 2:
             response_data = {
                 "res1": generated_texts[0],
