@@ -157,14 +157,14 @@ def register():
 @swag_from({
     'tags': ['Authentication'],
     'description': """
-    此API用來處理用戶登入，會驗證用戶名和密碼，並返回 access token 和 refresh token。
+    此API用來處理用戶登入，會驗證電子郵件和密碼，並返回 access token 和 refresh token。
 
     Input:
-    - 期望接收到包含 'account' 和 'password' 字段的 JSON 請求。
+    - 期望接收到包含 'email' 和 'password' 字段的 JSON 請求。
 
     Steps:
-    1. 驗證用戶名和密碼是否存在。
-    2. 使用提供的用戶名從數據庫中檢索用戶。
+    1. 驗證電子郵件和密碼是否存在。
+    2. 使用提供的電子郵件從數據庫中檢索用戶。
     3. 將輸入的密碼與存儲的哈希密碼進行驗證。
     4. 如果身份驗證成功，生成並返回 access token 和 refresh token。
     5. 處理潛在錯誤並返回適當的 HTTP 狀態碼。
@@ -182,10 +182,10 @@ def register():
             'schema': {
                 'type': 'object',
                 'properties': {
-                    'account': {
+                    'email': {
                         'type': 'string',
-                        'description': '用戶帳號',
-                        'example': 'andy1234'
+                        'description': '用戶電子郵件',
+                        'example': 'andy1234@example.com'
                     },
                     'password': {
                         'type': 'string',
@@ -193,7 +193,7 @@ def register():
                         'example': 'andy1234'
                     }
                 },
-                'required': ['account', 'password']
+                'required': ['email', 'password']
             }
         }
     ],
@@ -217,11 +217,11 @@ def register():
                     },
                     'firstname': {
                         'type': 'string',
-                        'example': 'Tzu-An'
+                        'example': 'An-An'
                     },
-                    'account': {
+                    'email': {
                         'type': 'string',
-                        'example': 'andy1234'
+                        'example': 'andy1234@example.com'
                     },
                     'access_token': {
                         'type': 'string',
@@ -235,25 +235,25 @@ def register():
             }
         },
         400: {
-            'description': '請求中缺少帳號或密碼',
+            'description': '請求中缺少電子郵件或密碼',
             'schema': {
                 'type': 'object',
                 'properties': {
                     'message': {
                         'type': 'string',
-                        'example': '帳號或密碼不可為空'
+                        'example': '電子郵件或密碼不可為空'
                     }
                 }
             }
         },
         401: {
-            'description': '帳號或密碼錯誤',
+            'description': '電子郵件或密碼錯誤',
             'schema': {
                 'type': 'object',
                 'properties': {
                     'message': {
                         'type': 'string',
-                        'example': '帳號或密碼錯誤'
+                        'example': '電子郵件或密碼錯誤'
                     }
                 }
             }
