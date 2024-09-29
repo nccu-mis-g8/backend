@@ -1,93 +1,112 @@
+import os
 import mimetypes
-from flask import Blueprint, request, Response, jsonify, send_file
+from flask import Blueprint, request, jsonify, send_file
 from flasgger import swag_from
 import logging
 import json
 
-from repository.userinfo_repo import UserInfoRepo
-from repository.userinfo_repo import UserInfoRepo
-import os
+from repository.userphoto_repo import UserPhotoRepo
+from models.user import User
 
 userinfo_bp = Blueprint("userinfo", __name__)
 logger = logging.getLogger(__name__)
 
-FILE_DIRECTORY = os.path.abspath("..\\user_info_file")
+FILE_DIRECTORY = os.path.abspath("..\\user_photo_file")
 
 def allowed_file(filename, extensions):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in extensions
 
 @userinfo_bp.post("/user/upload_photo")
 @swag_from({
-        "tags": ["UserInfo"],
-        "description": "此API 用於上傳使用者頭貼 (JPG, JPEG, PNG)",
-        "parameters": [
-            {
-                "name": "user_info",
-                "in": "formData",
-                "type": "string",
-                "required": True,
-                "description": "User information in JSON format",
-            },
-            {
-                "name": "file",
-                "in": "formData",
-                "type": "file",
-                "required": True,
-                "description": "The image file to upload",
-            },
-        ],
-        "responses": {
-            "200": {
-                "description": "File uploaded successfully",
-                "examples": {
-                    "application/json": {"message": "File uploaded successfully"}
-                },
-            },
-            "400": {
-                "description": "Bad request due to missing file or wrong file type",
-                "examples": {
-                    "application/json": {"error": "No file part in the request"}
-                },
-            },
-            "403": {
-                "description": "Forbidden request",
-                "examples": {"application/json": {"error": "Forbidden"}},
-            },
-            "500": {
-                "description": "Internal Error",
-                "examples": {"application/json": {"error": "Internal Server Error"}},
+    "tags": ["UserInfo"],
+    "description": "此API 用於上傳使用者頭貼，支援格式為 JPG, JPEG, PNG。",
+    "consumes": ["multipart/form-data"],
+    "parameters": [
+        {
+            "name": "user_info",
+            "in": "formData",
+            "type": "string",
+            "required": True,
+            "description": "User information in JSON format, containing the user ID",
+        },
+        {
+            "name": "file",
+            "in": "formData",
+            "type": "file",
+            "required": True,
+            "description": "The image file to upload (JPG, JPEG, PNG)",
+        },
+    ],
+    "responses": {
+        "200": {
+            "description": "File uploaded successfully",
+            "examples": {
+                "application/json": {"message": "File uploaded successfully"}
             },
         },
-    }
-)
+        "400": {
+            "description": "Bad request due to missing file, wrong file type, or invalid user information",
+            "examples": {
+                "application/json": {
+                    "error": "No file part in the request",
+                    "error": "File type not allowed. Only png, jpg, jpeg files are allowed.",
+                    "error": "Invalid user_info format"
+                }
+            },
+        },
+        "403": {
+            "description": "Forbidden request due to missing or invalid user information",
+            "examples": {"application/json": {"error": "Forbidden"}},
+        },
+        "404": {
+            "description": "User ID not found",
+            "examples": {"application/json": {"error": "User ID not found"}},
+        },
+        "500": {
+            "description": "Internal server error occurred while processing the request",
+            "examples": {"application/json": {"error": "Internal Server Error"}},
+        },
+    },
+})
 def upload_photo():
     user_info = request.form.get("user_info")
+    
+    # 檢查是否有 user_info
     if user_info:
-        user_info = json.loads(user_info)
+        try:
+            user_info = json.loads(user_info)
+        except ValueError:
+            return jsonify({"error": "Invalid user_info format"}), 400
     else:
         return jsonify({"error": "Forbidden"}), 403
 
     user_id = user_info.get("user_Id")
+    print(user_id)
     if not user_id:
         return jsonify({"error": "Invalid user ID"}), 400
+    
+    user_exists = User.is_user_id_exists(user_id)
+    if not user_exists:
+        return jsonify({"error": "User ID not found"}), 404
 
+    # 檢查是否有檔案
     if "file" not in request.files:
         return jsonify({"error": "No file part in the request"}), 400
 
     file = request.files["file"]
 
-    # 確認檔案是否存在
+    # 檢查檔案名稱是否存在
     if file.filename == "":
         return jsonify({"error": "No file provided"}), 400
 
     # 確認檔案類型是否為 jpg, jpeg, png
     if file and allowed_file(file.filename, ["jpg", "jpeg", "png"]):
         
-        # 確認目錄是否存在，若不存在則創建目錄
+         # 檢查並創建檔案目錄
         if not os.path.exists(FILE_DIRECTORY):
             os.makedirs(FILE_DIRECTORY)
 
-        current_file = UserInfoRepo.find_user_info_by_user_id(
+        current_file = UserPhotoRepo.find_user_photo_by_user_id(
             user_id=user_id
         )
         
