@@ -120,7 +120,7 @@ def upload_photo():
         )
 
 
-@userinfo_bp.get("/user/retrieve_photo/<user_id>")
+@userinfo_bp.get("/user/get_photo/<int:user_id>")
 @swag_from({
         "tags": ["UserInfo"],
         "description": "此API 用於拿取使用者頭貼 (JPG, JPEG, PNG)",
@@ -159,7 +159,7 @@ def upload_photo():
         },
     }
 )
-def retrieve_photo(user_id):
+def get_photo(user_id):
     
     user_info = UserInfoRepo.find_user_info_by_user_id(user_id)
 
@@ -171,7 +171,7 @@ def retrieve_photo(user_id):
         else:
             return jsonify({"error": "User or photo not found"}), 404
 
-    user_folder = os.path.join(FILE_DIRECTORY, user_id)
+    user_folder = os.path.join(FILE_DIRECTORY, str(user_id))
     file_path = os.path.join(user_folder, user_info.filename)
 
     # 檢查照片檔案是否存在
