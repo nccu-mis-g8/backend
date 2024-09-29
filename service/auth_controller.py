@@ -587,21 +587,21 @@ def logout():
     ],
 })
 def delete():
-    current_account = get_jwt_identity()
+    current_email = get_jwt_identity()
 
     try:
-        user_to_delete = User.get_user_by_account(current_account)
+        user_to_delete = User.get_user_by_email(current_email)
         if user_to_delete:
             try:
                 # 刪除用戶並提交變更
                 User.delete(user_to_delete)
-                logger.info(f"用戶 {current_account} 帳號刪除成功")
+                logger.info(f"用戶 {current_email} 帳號刪除成功")
                 return jsonify(message="帳號刪除成功"), 200
             except Exception as e:
-                logger.error(f"刪除用戶 {current_account} 帳號時發生錯誤: {str(e)}")
+                logger.error(f"刪除用戶 {current_email} 帳號時發生錯誤: {str(e)}")
                 return jsonify(message=f"帳號刪除失敗: {str(e)}"), 500
         else:
-            logger.warning(f"用戶 {current_account} 帳號刪除失敗：帳號不存在")
+            logger.warning(f"用戶 {current_email} 帳號刪除失敗：帳號不存在")
             return jsonify(message="找不到要刪除的帳號"), 404
     except Exception as e:
         logger.error(f"處理帳號刪除請求時發生錯誤: {str(e)}")
