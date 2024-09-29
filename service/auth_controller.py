@@ -608,19 +608,23 @@ def delete():
         return jsonify(message=f"帳號刪除失敗: {str(e)}"), 500
 
 
-def is_valid_account(account):
+def is_valid_email(email):
     """
-    驗證帳號是否合法。
+    驗證電子郵件是否合法，允許含多層域名的郵箱。
 
-    帳號應僅包含字母、數字、下劃線、點號和連字符。
+    電子郵件格式：
+    - 本地部分可以包含字母、數字、點號、加號、連字符或下劃線
+    - 必須包含 '@'
+    - 域名部分允許多層域名（如 nccu.edu.tw 和 g.nccu.edu.tw）
+    - 頂級域名至少需要2個字符
 
     Parameters:
-    - account (str): 要驗證的用戶名。
+    - email (str): 要驗證的電子郵件地址。
 
     Returns:
-    - bool: 如果用戶名合法，返回 True；否則返回 False。
+    - bool: 如果電子郵件地址合法，返回 True；否則返回 False。
     """
-    return re.match(r"^[a-zA-Z0-9_.-]+$", account)
+    return re.match(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,}$", email) is not None
 
 
 def is_strong_password(password):
