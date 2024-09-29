@@ -405,21 +405,25 @@ def login():
 })
 def refresh():
     try:
-        # 獲取當前使用者身份
-        current_account = get_jwt_identity()
-        user = User.get_user_by_account(current_account)
-        
-        # 從請求中獲取 Refresh Token
-        refresh_token = request.headers.get("Authorization").split(" ")[1]
+        # 從 JWT 中獲取當前使用者身份 (email)
+        current_email = get_jwt_identity()
+        user = User.get_user_by_email(current_email)
 
-        # 從資料庫查找這個 Refresh Token
+        # 檢查 Authorization header 並提取 refresh token
+        auth_header = request.headers.get("Authorization", None)
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return jsonify(message="Authorization header 缺失或格式錯誤"), 401
+
+        refresh_token = auth_header.split(" ")[1]
+
+        # 從資料庫中查找這個 Refresh Token
         stored_token = RefreshToken.find_by_token_and_user(refresh_token, user.id)
 
         if not stored_token or stored_token.revoked:
             return jsonify(message="Refresh Token 已失效或已撤銷"), 401
 
         # 為當前使用者生成新的 Access Token
-        new_access_token = create_access_token(identity=current_account)
+        new_access_token = create_access_token(identity=current_email)
 
         # 返回新的 Access Token
         return jsonify(access_token=new_access_token), 200
