@@ -498,8 +498,8 @@ def refresh():
 def logout():
     try:
         # 獲取當前用戶的身份
-        current_account = get_jwt_identity()
-        user = User.get_user_by_account(current_account)
+        current_email = get_jwt_identity()
+        user = User.get_user_by_email(current_email)
 
         # 從資料庫查找對應的 Refresh Token
         stored_token = RefreshToken.find_by_userId(user.id)
