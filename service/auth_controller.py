@@ -23,11 +23,11 @@ logger = logging.getLogger(__name__)
     此API用來處理用戶註冊，會檢查用戶名、密碼是否有效，並將新用戶保存至資料庫。
 
     Input:
-        - JSON 格式的請求，包含 'lastname'、'firstname'、'account' 和 'password' 字段。
+        - JSON 格式的請求，包含 'lastname'、'firstname'、'email' 和 'password' 字段。
 
     Steps:
         1. 檢查所有必須的字段是否提供且有效。
-        2. 檢查使用者帳號是否已被使用。
+        2. 檢查使用者電子郵件是否已被使用。
         3. 檢查密碼強度。
         4. 如果所有檢查通過，創建新的用戶並保存到資料庫。
         5. 處理可能的資料庫錯誤或其他異常。
@@ -53,12 +53,12 @@ logger = logging.getLogger(__name__)
                     'firstname': {
                         'type': 'string',
                         'description': '用戶名字',
-                        'example': 'Tzu-An'
+                        'example': 'An-An'
                     },
-                    'account': {
+                    'email': {
                         'type': 'string',
-                        'description': '用戶帳號',
-                        'example': 'andy1234'
+                        'description': '用戶電子郵件',
+                        'example': 'andy1234@example.com'
                     },
                     'password': {
                         'type': 'string',
@@ -66,7 +66,7 @@ logger = logging.getLogger(__name__)
                         'example': 'andy1234'
                     }
                 },
-                'required': ['lastname', 'firstname', 'account', 'password']
+                'required': ['lastname', 'firstname', 'email', 'password']
             }
         }
     ],
@@ -84,13 +84,13 @@ logger = logging.getLogger(__name__)
             }
         },
         400: {
-            'description': '註冊失敗，輸入無效或用戶名已存在',
+            'description': '註冊失敗，輸入無效或電子郵件已存在',
             'schema': {
                 'type': 'object',
                 'properties': {
                     'message': {
                         'type': 'string',
-                        'example': '此帳號已被使用'
+                        'example': '此電子郵件已被使用'
                     }
                 }
             }
