@@ -7,13 +7,13 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     lastname = db.Column(db.String(50), nullable=False)
     firstname = db.Column(db.String(50), nullable=False)
-    account = db.Column(db.String(50), nullable=False)
+    email = db.Column(db.String(255), nullable=False)
     password = db.Column(db.String(255), nullable=False)
 
-    def __init__(self, lastname, firstname, account, password):
+    def __init__(self, lastname, firstname, email, password):
         self.lastname = lastname
         self.firstname = firstname
-        self.account = account
+        self.email = email
         self.password = generate_password_hash(password)
 
     def check_password(self, password):
@@ -29,17 +29,17 @@ class User(db.Model):
         return check_password_hash(self.password, password)
 
     @classmethod
-    def get_user_by_account(cls, account):
+    def get_user_by_email(cls, email):
         """
-        根據帳號查找並返回對應的 User 實例。
+        根據信箱查找並返回對應的 User 實例。
 
         Parameters:
-        - account (str): 要查找的帳號。
+        - email (str): 要查找的信箱。
 
         Returns:
         - User 實例，如果找到；否則返回 None。
         """
-        return cls.query.filter_by(account=account).first()
+        return cls.query.filter_by(email=email).first()
 
     def save(self):
         """
