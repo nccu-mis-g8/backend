@@ -122,25 +122,20 @@ def upload_csv_file():
             400,
         )
 
-@utils_bp.post('/user/training_files')
+@utils_bp.get('/user/training_files/<int:user_id>')
 @swag_from({
     "tags": ["Utils"],
-    'description': '此 api 用於拿到指定user_id 的 training file',
+    'description': '此 api 用於拿到指定 user_id 的 training file',
     'parameters': [
         {
             'name': 'user_id',
-            'in': 'body',
+            'in': 'path',
             'type': 'integer',
             'required': True,
             'description': 'The ID of the user whose training file is being retrieved.',
             'schema': {
-                'type': 'object',
-                'properties': {
-                    'user_id': {
-                        'type': 'integer',
-                        'example': 1
-                    }
-                }
+                'type': 'integer',
+                'example': 1
             }
         }
     ],
@@ -160,11 +155,11 @@ def upload_csv_file():
             }
         },
         '400': {
-            'description': 'user_id is missing',
+            'description': 'Invalid user_id',
             'schema': {
                 'type': 'object',
                 'properties': {
-                    'message': {'type': 'string', 'example': 'user_id is required'}
+                    'message': {'type': 'string', 'example': 'Invalid user_id'}
                 }
             }
         },
@@ -188,12 +183,7 @@ def upload_csv_file():
         }
     }
 })
-def get_user_training_files():
-    user_id = request.json.get('user_id')  # 取得 user_id
-
-    if not user_id:
-        return jsonify({"message": "user_id is required"}), 400
-
+def get_user_training_files(user_id):
     try:
         training_file = TrainingFileRepo.find_first_training_file_by_user_id(user_id)
         
@@ -204,12 +194,15 @@ def get_user_training_files():
         logging.error(f"Error retrieving training files for user {user_id}: {e}")
         return jsonify({"message": "An error occurred while fetching training files."}), 500
 
-    return jsonify({"id": training_file.id,
-                    "user_id": training_file.user_id,
-                    "filename": training_file.filename,
-                    "original_file_name": training_file.original_file_name,
-                    "is_trained": training_file.is_trained,
-                    "upload_time": training_file.upload_time.strftime('%Y-%m-%d %H:%M:%S')}),200
+    return jsonify({
+        "id": training_file.id,
+        "user_id": training_file.user_id,
+        "filename": training_file.filename,
+        "original_file_name": training_file.original_file_name,
+        "is_trained": training_file.is_trained,
+        "upload_time": training_file.upload_time.strftime('%Y-%m-%d %H:%M:%S')
+    }), 200
+    
     
 @utils_bp.post('/user/upload_txt_file')
 @swag_from({
