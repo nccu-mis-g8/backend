@@ -111,31 +111,31 @@ logger = logging.getLogger(__name__)
 })
 def register():
     try:
-        # 從請求中獲取用戶輸入的姓名、帳號和密碼
+        # 從請求中獲取用戶輸入的姓名、電子郵件和密碼
         lastname = request.json.get("lastname", None)
         firstname = request.json.get("firstname", None)
-        account = request.json.get("account", None)
+        email = request.json.get("email", None)
         password = request.json.get("password", None)
 
         # 檢查輸入是否有效
-        if not lastname or not firstname or not account or not password:
-            return jsonify(message="姓氏、名字、帳號和密碼不可為空"), 400
+        if not lastname or not firstname or not email or not password:
+            return jsonify(message="姓氏、名字、電子郵件和密碼不可為空"), 400
 
-        # 檢查帳號是否符合規範
-        if not is_valid_account(account):
-            return jsonify(message="使用者名稱不符合規範"), 400
+        # 檢查電子郵件是否符合規範
+        if not is_valid_email(email):
+            return jsonify(message="使用者電子郵件不符合規範"), 400
 
         # 檢查密碼強度
         if not is_strong_password(password):
             return jsonify(message="密碼必須至少包含8個字符，並包含字母和數字"), 400
 
         # 創建新的用戶實例
-        new_user = User(lastname=lastname, firstname=firstname, account=account, password=password)
+        new_user = User(lastname=lastname, firstname=firstname, email=email, password=password)
 
-        # 檢查帳號是否已存在
-        user = User.get_user_by_account(account)
+        # 檢查電子郵件是否已存在
+        user = User.get_user_by_email(email=email)
         if user is not None:
-            return jsonify(message="此帳號已被使用"), 400
+            return jsonify(message="此電子郵件已被使用"), 400
 
         # 保存新用戶到數據庫
         new_user.save()
