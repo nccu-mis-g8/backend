@@ -274,30 +274,33 @@ def register():
 })
 def login():
     try:
-        account = request.json.get("account", None)
+        # 從請求中獲取用戶輸入的電子郵件和密碼
+        email = request.json.get("email", None)
         password = request.json.get("password")
 
-        # 檢查是否提供了帳號和密碼
-        if not account or not password:
-            return jsonify(message="帳號或密碼不可為空"), 400
+        # 檢查是否提供了電子郵件和密碼
+        if not email or not password:
+            return jsonify(message="電子郵件或密碼不可為空"), 400
 
         # 從數據庫中檢索用戶
-        user = User.get_user_by_account(account)
+        user = User.get_user_by_email(email=email)
         if user is None or not user.check_password(password):
-            return jsonify(message="帳號或密碼錯誤"), 401
+            return jsonify(message="電子郵件或密碼錯誤"), 401
 
+        # 刪除之前的 refresh token
         RefreshToken.delete_revoked_tokens(user.id)
 
         # 成功登入時生成 token
         access_token = create_access_token(
-            identity=account, expires_delta=timedelta(minutes=30)
+            identity=email, expires_delta=timedelta(minutes=30)
         )
         refresh_token = create_refresh_token(
-            identity=account, expires_delta=timedelta(days=7)
+            identity=email, expires_delta=timedelta(days=7)
         )
 
+        # 保存新的 refresh token 到數據庫
         new_refresh_token = RefreshToken(
-            user_id=user.id,  # Use the user ID from the User model
+            user_id=user.id,  # 使用用戶ID
             token=refresh_token,
         )
 
@@ -306,10 +309,10 @@ def login():
         return (
             jsonify(
                 message="登入成功", 
-                user_id = user.id,
-                lastname = user.lastname,
-                firstname = user.firstname,
-                account = user.account,
+                user_id=user.id,
+                lastname=user.lastname,
+                firstname=user.firstname,
+                email=user.email,
                 access_token=access_token, 
                 refresh_token=refresh_token
             ),
