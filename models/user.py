@@ -40,6 +40,19 @@ class User(db.Model):
         - User 實例，如果找到；否則返回 None。
         """
         return cls.query.filter_by(email=email).first()
+    
+    @classmethod
+    def is_user_id_exists(cls, user_id):
+        """
+        檢查給定的 user_id 是否存在於資料庫中。
+
+        Parameters:
+        - user_id (int): 要查找的使用者 ID。
+
+        Returns:
+        - bool: 如果 user_id 存在於資料庫，返回 True，否則返回 False。
+        """
+        return db.session.query(cls.id).filter_by(id=user_id).scalar() is not None
 
     def save(self):
         """
