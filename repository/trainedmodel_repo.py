@@ -4,7 +4,6 @@ from sqlalchemy import desc
 
 from models.trained_model import TrainedModel
 from extensions import db
-import logging
 
 
 class TrainedModelRepo:
