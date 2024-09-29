@@ -95,12 +95,12 @@ def upload_photo():
         
         # 上傳新的覆蓋舊的，把舊的file實體刪除
         if current_file:
-            os.remove(os.path.join(user_folder, current_file.filename))
-            UserInfoRepo.delete_user_info_by_user_id(user_id)
+            os.remove(os.path.join(user_folder, current_file.photoname))
+            UserPhotoRepo.delete_user_photo_by_user_id(user_id)
             
         # 儲存檔案
-        saved_file = UserInfoRepo.create_user_info(
-            user_id=user_id, filename=file.filename
+        saved_file = UserPhotoRepo.create_user_photo(
+            user_id=user_id, photoname=file.filename
         )
         if not saved_file:
             return (
@@ -111,7 +111,7 @@ def upload_photo():
         if not os.path.exists(user_folder):
             os.makedirs(user_folder)
 
-        file.save(os.path.join(user_folder, saved_file.filename))
+        file.save(os.path.join(user_folder, saved_file.photoname))
         return jsonify({"message": "File uploaded successfully"}), 200
     else:
         return (
@@ -161,7 +161,7 @@ def upload_photo():
 )
 def get_photo(user_id):
     
-    user_info = UserInfoRepo.find_user_info_by_user_id(user_id)
+    user_info = UserPhotoRepo.find_user_photo_by_user_id(user_id)
 
     # 如果使用者頭像是 null，則回傳預設圖片
     if not user_info:
@@ -172,7 +172,7 @@ def get_photo(user_id):
             return jsonify({"error": "User or photo not found"}), 404
 
     user_folder = os.path.join(FILE_DIRECTORY, str(user_id))
-    file_path = os.path.join(user_folder, user_info.filename)
+    file_path = os.path.join(user_folder, user_info.photoname)
 
     # 檢查照片檔案是否存在
     if not os.path.exists(file_path):
