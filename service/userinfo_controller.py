@@ -142,43 +142,58 @@ def upload_photo():
 @userinfo_bp.get("/user/get_photo/<int:user_id>")
 @swag_from({
         "tags": ["UserInfo"],
-        "description": "此API 用於拿取使用者頭貼 (JPG, JPEG, PNG)",
+        "description": "此API用於拿取使用者頭貼 (JPG, JPEG, PNG)",
         "parameters": [
             {
                 "name": "user_id",
                 "in": "path",
-                "type": "string",
+                "type": "integer",
                 "required": True,
-                "description": "User information in JSON format",
+                "description": "使用者的唯一ID",
             },
         ],
         "responses": {
             "200": {
-                "description": "File uploaded successfully",
+                "description": "成功回傳使用者頭像",
                 "content": {
                     "image/jpeg": {},
                     "image/png": {},
                     "image/jpg": {}
                 }
             },
-            "400": {
-                "description": "Bad request due to missing file or wrong file type",
-                "examples": {
-                    "application/json": {"error": "No file part in the request"}
-                },
-            },
             "403": {
-                "description": "Forbidden request",
-                "examples": {"application/json": {"error": "Forbidden"}},
+                "description": "禁止請求",
+                "content": {
+                    "application/json": {
+                        "example": {"error": "Forbidden"}
+                    }
+                }
+            },
+            "404": {
+                "description": "使用者或照片找不到",
+                "content": {
+                    "application/json": {
+                        "example": {"error": "User ID not found"}
+                    }
+                }
             },
             "500": {
-                "description": "Internal Error",
-                "examples": {"application/json": {"error": "Internal Server Error"}},
+                "description": "內部伺服器錯誤",
+                "content": {
+                    "application/json": {
+                        "example": {"error": "Internal Server Error"}
+                    }
+                }
             },
         },
     }
 )
 def get_photo(user_id):
+    
+    # 確認使用者是否存在
+    user_exists = User.is_user_id_exists(user_id)
+    if not user_exists:
+        return jsonify({"error": "User ID not found"}), 404
     
     user_info = UserPhotoRepo.find_user_photo_by_user_id(user_id)
 
