@@ -4,11 +4,11 @@ from flask import (
     jsonify,
 )
 from flasgger import swag_from
+from repository.trainingfile_repo import TrainingFileRepo
+from models.user import User
 import json
 import os
 import logging
-
-from repository.trainingfile_repo import TrainingFileRepo
 import linetxt_to_llama
 
 utils_bp = Blueprint("utils", __name__)
@@ -184,6 +184,12 @@ def upload_csv_file():
     }
 })
 def get_user_training_files(user_id):
+    
+    # 確認使用者是否存在
+    user_exists = User.is_user_id_exists(user_id)
+    if not user_exists:
+        return jsonify({"error": "User ID not found"}), 404
+    
     try:
         training_file = TrainingFileRepo.find_first_training_file_by_user_id(user_id)
         
