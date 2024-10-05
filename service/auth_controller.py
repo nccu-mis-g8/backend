@@ -12,6 +12,11 @@ from sqlalchemy.exc import SQLAlchemyError
 import re
 import logging
 
+from werkzeug.security import generate_password_hash
+import utils.mail_sender as mail_sender
+from repository.password_verification_repo import PasswordVerificationCodeRepo
+import pyotp
+
 auth_bp = Blueprint("auth", __name__)
 logger = logging.getLogger(__name__)
 
@@ -644,3 +649,246 @@ def is_strong_password(password):
         and re.search(r"[A-Za-z]", password)
         and re.search(r"[0-9]", password)
     )
+
+@auth_bp.post("/forgotPassword")
+@swag_from({
+    'tags': ['Authentication'],
+    'description': """
+    此API用來處理用戶重設密碼請求保存至資料庫。
+
+    Input:
+        - JSON: 'email' 
+
+    Steps:
+        1. 檢查所有必須的字段是否提供且有效。
+        2. 檢查使用者電子郵件是否已被使用。
+
+    Returns:
+        - JSON 格式的回應消息:
+            - 註冊成功: 包含成功消息。
+            - 註冊失敗: 包含錯誤消息和相應的 HTTP status code。
+    """,
+    'parameters': [
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'email': {
+                        'type': 'string',
+                        'description': '用戶電子郵件',
+                        'example': 'andy1234@example.com'
+                    },
+                },
+                'required': ['email']
+            }
+        }
+    ],
+    'responses': {
+        200: {
+            'description': '請求成功',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'message': {
+                        'type': 'string',
+                        'example': '請求成功'
+                    }
+                }
+            }
+        },
+        400: {
+            'description': '註冊失敗，輸入無效或電子郵件不存在',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'message': {
+                        'type': 'string',
+                        'example': '此電子郵件不存在'
+                    }
+                }
+            }
+        },
+        500: {
+            'description': '伺服器錯誤，可能是資料庫異常',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'message': {
+                        'type': 'string',
+                        'example': '資料庫錯誤，請稍後再試'
+                    }
+                }
+            }
+        }
+    }
+})
+def forgotPassword():
+    try:
+        # 從請求中獲取用戶輸入的電子郵件
+        email = request.json.get("email", None)
+        print(email)
+        # 檢查電子郵件是否符合規範
+        if not is_valid_email(email):
+            return jsonify(message="使用者電子郵件不符合規範"), 400
+
+        # 檢查電子郵件是否已存在
+        user = User.get_user_by_email(email=email)
+        if user is None:
+            return jsonify(message="此電子郵件不存在"), 400
+        
+        #確認之前是否有寄過驗證碼，有的話把他刪掉
+        saved_verification_code = PasswordVerificationCodeRepo.find_password_verification_code_by_email(email=email)
+        if saved_verification_code is not None:
+            PasswordVerificationCodeRepo.delete_password_verification_code_by_email(saved_verification_code.email)
+
+        #創建新的OTP
+        totp = pyotp.TOTP(pyotp.random_base32())
+        verification_code = totp.now() 
+
+        # 保存忘記密碼的驗證碼到DB
+        saved_verification_code = PasswordVerificationCodeRepo.create_password_verification_code(email=email, verification_code=verification_code)
+        if saved_verification_code is None:
+            return jsonify(message="資料庫錯誤，請稍後再試"), 500
+        
+        subject = "忘記密碼驗證碼"
+        mail_content = f"您的驗證碼是 {verification_code}"
+
+        # 寄送驗證信
+        mail_sender.send_email(email, subject, mail_content)
+
+        # 返回成功消息
+        return jsonify(message="驗證信已成功寄出"), 200
+
+    except SQLAlchemyError as e:
+        # 記錄資料庫錯誤並返回錯誤消息
+        logger.error(f"Database error: {e}")
+        return jsonify(message="資料庫錯誤，請稍後再試"), 500
+    except Exception as e:
+        # 記錄一般錯誤並返回錯誤消息
+        logger.error(f"Registration failed: {e}")
+        return jsonify(message=f"請求失敗: {str(e)}"), 500
+
+@auth_bp.post("/resetPassword")
+@swag_from({
+    'tags': ['Authentication'],
+    'description': """
+    此API用來處理用戶重設密碼並保存至資料庫。
+
+    Input:
+        - JSON: 'VerificationCode' 和 'NewPassword'
+
+    Steps:
+        1. 檢查所有必須的字段是否提供且有效。
+        2. 檢查使用者電子郵件是否已被使用。
+
+    Returns:
+        - JSON 格式的回應消息:
+            - 註冊成功: 包含成功消息。
+            - 註冊失敗: 包含錯誤消息和相應的 HTTP status code。
+    """,
+    'parameters': [
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'email': {
+                        'type': 'string',
+                        'description': '用戶電子郵件',
+                        'example': 'andy1234@example.com'
+                    },
+                    'verficationCode': {
+                        'type': 'string',
+                        'description': '驗證碼',
+                        'example': 'andy1234@example.com'
+                    },
+                    'password1': {
+                        'type': 'string',
+                        'description': '第一次輸入密碼',
+                        'example': 'ABC1234abc'
+                    },
+                    'password2': {
+                        'type': 'string',
+                        'description': '第二次輸入密碼',
+                        'example': 'ABC1234abc'
+                    }
+                },
+                'required': ['email', 'verficationCode', 'password1', 'password2']
+            }
+        }
+    ],
+    'responses': {
+        200: {
+            'description': '請求成功',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'message': {
+                        'type': 'string',
+                        'example': '請求成功'
+                    }
+                }
+            }
+        },
+        400: {
+            'description': '註冊失敗，輸入無效或電子郵件不存在',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'message': {
+                        'type': 'string',
+                        'example': '此電子郵件不存在'
+                    }
+                }
+            }
+        },
+        500: {
+            'description': '伺服器錯誤，可能是資料庫異常',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'message': {
+                        'type': 'string',
+                        'example': '資料庫錯誤，請稍後再試'
+                    }
+                }
+            }
+        }
+    }
+})
+def resetPassword():
+    try:
+        # 從請求中獲取用戶輸入的電子郵件
+        email = request.json.get("email", None)
+        verficationCode = request.json.get("verficationCode", None)
+        password1 = request.json.get("password1", None)
+        password2 = request.json.get("password2", None)
+        
+        verficationCode_exist = PasswordVerificationCodeRepo.find_password_verification_code_by_email(email=email).verification_code
+        if verficationCode_exist != str(verficationCode):
+            return jsonify(message="驗證碼錯誤"), 400
+        
+        if is_strong_password(password1) == False:
+            return jsonify(message="密碼格式錯誤"), 400
+        
+        if password1 != password2:
+            return jsonify(message="兩次密碼不一致"), 400
+        
+        user = User.get_user_by_email(email=email)
+        user.change_password(password1)
+
+        return jsonify(message="密碼更新成功"), 200
+
+    except SQLAlchemyError as e:
+        # 記錄資料庫錯誤並返回錯誤消息
+        logger.error(f"Database error: {e}")
+        return jsonify(message="資料庫錯誤，請稍後再試"), 500
+    except Exception as e:
+        # 記錄一般錯誤並返回錯誤消息
+        logger.error(f"Registration failed: {e}")
+        return jsonify(message=f"請求失敗: {str(e)}"), 500
