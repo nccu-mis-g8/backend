@@ -1,38 +1,83 @@
-from typing import List
-from transformers import AutoTokenizer
-import transformers
+import os
+import json
+import random
 import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from peft import PeftModel
+from flask import jsonify, Response
+import traceback
+from requests.exceptions import RequestException
+from concurrent.futures import TimeoutError
+from repository.trainingfile_repo import TrainingFileRepo
 
+def generate_response(model_dir, input_text,user_id):
+    try:
+        if not os.path.exists(model_dir):
+            return jsonify({"error": "Model directory not found"}), 404
 
-def inference(model: str) -> List[str]:
-    tokenizer = AutoTokenizer.from_pretrained(model)
+        model = AutoModelForCausalLM.from_pretrained(model_dir)
+        model = PeftModel.from_pretrained(model, model_dir)
+        tokenizer = AutoTokenizer.from_pretrained(model_dir)
 
-    print("Generating text...")
-    pipeline = transformers.pipeline(
-        "text-generation", model=model, torch_dtype=torch.float16, framework="pt"
-    )
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        model.to(device)
 
-    input_text = "你等等有課嗎？ 請用朋友語氣回答我："
+        user_history = TrainingFileRepo.find_training_history_by_user_id(user_id=user_id)
 
-    sequences = pipeline(
-        input_text,
-        do_sample=True,
-        top_p=0.9,
-        temperature=0.6,
-        top_k=10,
-        num_return_sequences=1,
-        eos_token_id=tokenizer.eos_token_id,
-        max_length=50,
-        truncation=True,
-    )
+         # 隨機選取 5 筆歷史資料
+        num_samples = 5
+        if len(user_history) > num_samples:
+            recent_history = random.sample(user_history, num_samples)
+        else:
+            recent_history = user_history
+        
+        chat = [
+            {"role": "system", "content": "你是我的朋友，請你以和過去回答相同的語氣與我聊天，注意回答的內容要符合問題。"}
+        ]
 
-    for seq in sequences:
-        generated_text = seq["generated_text"]
-        result = (
-            generated_text.replace(input_text, "")
-            .replace("「", "")
-            .replace("」", "")
-            .strip()
+        if recent_history:
+            for history in user_history:
+                chat.append({"role": "user", "content": history["input"]})
+                chat.append({"role": "assistant", "content": history["output"]})
+        
+        chat.append({"role": "user", "content": f"{input_text}"})
+        
+        prompt = tokenizer.apply_chat_template(chat, tokenize=False, add_generation_prompt=True)
+        inputs = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True, max_length=256)
+        input_ids = inputs["input_ids"].to(device)
+        attention_mask = inputs["attention_mask"].to(device)
+
+        generate_two_responses = random.random() < 0.5
+        num_return_sequences = 2 if generate_two_responses else 1
+
+        outputs = model.generate(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            do_sample=True,
+            max_length=256,
+            top_k=50,
+            top_p=0.95,
+            temperature=0.7,
+            num_return_sequences=num_return_sequences
         )
-        print(f"Result: {result}")
-    return []
+
+        generated_texts = [tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
+
+        if num_return_sequences == 2:
+            response_data = {
+                "res1": generated_texts[0],
+                "res2": generated_texts[1],
+                "mes": "選擇您認為更好的回答"
+            }
+        else:
+            response_data = {"res": generated_texts[0]}
+
+        response = json.dumps(response_data, ensure_ascii=False)
+        return Response(response, content_type="application/json; charset=utf-8")
+
+    except (RequestException, TimeoutError) as e:
+        return jsonify({"error": "Error in generating response, please try again"}), 500
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
+

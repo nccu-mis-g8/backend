@@ -13,6 +13,7 @@ from repository.trainedmodel_repo import TrainedModelRepo
 from repository.trainingfile_repo import TrainingFileRepo
 from service.utils_controller import FILE_DIRECTORY
 from train_model.finetune import BASE_MODEL_DIR, train
+from train_model.inference import generate_response
 from concurrent.futures import TimeoutError
 from requests.exceptions import RequestException
 from transformers import AutoTokenizer,AutoModelForCausalLM
@@ -123,7 +124,67 @@ def train_model():
         return jsonify({"status": "Error", "message": str(e)}), 500
 
 @train_model_bp.post("/chat")
-@train_model_bp.post("/chat")
+@swag_from(
+    {
+        "tags": ["Chat"],
+        "description": """
+        這個 API 用來與已訓練模型進行聊天。它接收使用者的輸入文本並返回模型的生成回應。
+
+        Input:
+        - user_info: 包含使用者的基本訊息 (例如 user_Id)。
+        - input_text: 使用者的聊天輸入。
+
+        Returns:
+        - JSON 回應訊息：
+          - 成功時：返回生成的聊天回應。
+          - 失敗時：返回錯誤消息及相應的 HTTP 狀態碼。
+        """,
+        "parameters": [
+            {
+                "name": "user_info",
+                "in": "formData",
+                "type": "string",
+                "description": "使用者的訊息，包括 user_Id",
+                "required": True
+            },
+            {
+                "name": "input_text",
+                "in": "formData",
+                "type": "string",
+                "description": "使用者的聊天輸入文本",
+                "required": True
+            }
+        ],
+        "responses": {
+            200: {
+                "description": "回應成功",
+                "examples": {
+                    "application/json": {
+                        "res": "這是模型生成的回應",
+                    }
+                }
+            },
+            400: {
+                "description": "輸入錯誤",
+                "examples": {
+                    "application/json": {"error": "Input text is required"}
+                },
+            },
+            404: {
+                "description": "模型未找到",
+                "examples": {
+                    "application/json": {"error": "Model directory not found"}
+                }
+            },
+            500: {
+                "description": "內部錯誤",
+                "examples": {
+                    "application/json": {"error": "Internal server error"}
+                }
+            }
+        },
+    }
+)
 def chat():
     user_info = request.form.get("user_info")
     if user_info:
@@ -138,67 +199,8 @@ def chat():
     if trained_model is not None:
         model_dir = os.path.abspath(os.path.join("..", "saved_models", trained_model.modelname))
 
-        if not os.path.exists(model_dir):
-            return jsonify({"error": "Model directory not found"}), 404
-
-        # 加載模型和 tokenizer
-        model = AutoModelForCausalLM.from_pretrained(model_dir)
-        model = PeftModel.from_pretrained(model, model_dir)
-        tokenizer = AutoTokenizer.from_pretrained(model_dir)
-    
-    try:
         input_text = request.form.get("input_text", "")
         if not input_text:
             return jsonify({"error": "Input text is required"}), 400
 
-        # 設置設備
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-        # 確保模型移動到正確的設備
-        model.to(device)
-
-        chat = [
-            {"role": "system", "content": "你是我的朋友，請你以和過去回答相同的語氣與我聊天，注意回答的內容要符合問題。"},
-            {"role": "user", "content": f"{input_text}"},
-        ]
-
-        prompt = tokenizer.apply_chat_template(chat, tokenize=False, add_generation_prompt=True)
-
-        inputs = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True, max_length=256)
-        input_ids = inputs["input_ids"].to(device)
-        attention_mask = inputs["attention_mask"].to(device)
-
-        # 決定是否生成兩個回應
-        generate_two_responses = random.random() < 0.5
-        num_return_sequences = 2 if generate_two_responses else 1
-
-        outputs = model.generate(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            do_sample=True,
-            max_length=256,
-            top_k=50,
-            top_p=0.95,
-            temperature=0.7,
-            num_return_sequences=num_return_sequences
-        )
-
-        generated_texts = [tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
-
-        if num_return_sequences == 2:
-            response_data = {
-                "res1": generated_texts[0],
-                "res2": generated_texts[1],
-                "mes": "選擇您認為更好的回答"
-            }
-        else:
-            response_data = {"res": generated_texts[0]}
-
-        response = json.dumps(response_data, ensure_ascii=False)
-        return Response(response, content_type="application/json; charset=utf-8")
-
-    except (RequestException, TimeoutError) as e:
-        return jsonify({"error": "Error in generating response, please try again"}), 500
-    except Exception as e:
-        traceback.print_exc()
-        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
+        return generate_response(model_dir, input_text,user_id)
