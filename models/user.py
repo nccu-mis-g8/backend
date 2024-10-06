@@ -54,6 +54,19 @@ class User(db.Model):
         """
         return db.session.query(cls.id).filter_by(id=user_id).scalar() is not None
 
+    def change_password(self, new_password):
+        """
+        更改使用者的密碼，並將加密後的新密碼保存到資料庫中。
+
+        Parameters:
+        - new_password (str): 使用者的新密碼。
+
+        Returns:
+        - None
+        """
+        self.password = generate_password_hash(new_password)
+        db.session.commit()
+
     def save(self):
         """
         將當前 User 實例保存到資料庫中。
@@ -67,19 +80,6 @@ class User(db.Model):
         """
         db.session.delete(self)
         db.session.commit()
-
-    def change_password(self, new_password):
-        """
-        更改使用者的密碼，並將加密後的新密碼保存到資料庫中。
-
-        Parameters:
-        - new_password (str): 使用者的新密碼。
-
-        Returns:
-        - None
-        """
-        self.password = generate_password_hash(new_password)  # 將新密碼加密
-        db.session.commit()  # 將變更提交到資料庫
 
 
 class RefreshToken(db.Model):
