@@ -850,6 +850,9 @@ def resetPassword():
         
         user = User.get_user_by_email(email=email)
         user.change_password(password1)
+        
+        # 若密碼更新成功，刪除驗證碼
+        PasswordVerificationCodeRepo.delete_password_verification_code_by_email(email=email)
 
         return jsonify(message="密碼更新成功"), 200
 
