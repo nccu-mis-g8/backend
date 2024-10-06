@@ -22,7 +22,7 @@ def generate_response(model_dir, input_text,user_id):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         model.to(device)
 
-        user_history = TrainingFileRepo.find_training_history_by_user_id(user_id=user_id)
+        user_history = TrainingFileRepo.find_trainingfile_by_user_id(user_id=user_id)
 
          # 隨機選取 5 筆歷史資料
         num_samples = 5
