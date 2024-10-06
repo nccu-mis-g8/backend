@@ -705,12 +705,12 @@ def forgotPassword():
         if user is None:
             return jsonify(message="此電子郵件不存在"), 400
         
-        #確認之前是否有寄過驗證碼，有的話把他刪掉
+        # 刪除之前的驗證碼
         saved_verification_code = PasswordVerificationCodeRepo.find_password_verification_code_by_email(email=email)
         if saved_verification_code is not None:
             PasswordVerificationCodeRepo.delete_password_verification_code_by_email(saved_verification_code.email)
 
-        #創建新的OTP
+        # 創建新的OTP
         totp = pyotp.TOTP(pyotp.random_base32())
         verification_code = totp.now() 
 
@@ -834,7 +834,7 @@ def resetPassword():
     try:
         # 從請求中獲取用戶輸入的電子郵件
         email = request.json.get("email", None)
-        verficationCode = request.json.get("verficationCode", None)
+        verficationCode = request.json.get("verificationCode", None)
         password1 = request.json.get("password1", None)
         password2 = request.json.get("password2", None)
         
