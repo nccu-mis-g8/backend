@@ -617,19 +617,22 @@ def delete():
 @swag_from({
     'tags': ['Authentication'],
     'description': """
-    此API用來處理用戶重設密碼請求保存至資料庫。
+    此API用來處理用戶的忘記密碼請求，將驗證碼發送到用戶的電子郵件並保存至資料庫。
 
     Input:
         - JSON: 'email' 
 
     Steps:
         1. 檢查所有必須的字段是否提供且有效。
-        2. 檢查使用者電子郵件是否已被使用。
+        2. 檢查使用者電子郵件是否存在於系統中。
+        3. 如果該用戶之前請求過，則刪除之前的驗證碼。
+        4. 創建新的驗證碼並保存到資料庫中。
+        5. 向用戶的電子郵件地址發送驗證碼。
 
     Returns:
         - JSON 格式的回應消息:
-            - 註冊成功: 包含成功消息。
-            - 註冊失敗: 包含錯誤消息和相應的 HTTP status code。
+            - 成功請求驗證碼: 包含成功消息並發送電子郵件。
+            - 請求失敗: 包含錯誤消息和相應的 HTTP 狀態碼。
     """,
     'parameters': [
         {
@@ -641,7 +644,7 @@ def delete():
                 'properties': {
                     'email': {
                         'type': 'string',
-                        'description': '用戶電子郵件',
+                        'description': '用戶電子郵件地址',
                         'example': 'andy1234@example.com'
                     },
                 },
@@ -651,31 +654,31 @@ def delete():
     ],
     'responses': {
         200: {
-            'description': '請求成功',
+            'description': '請求成功，驗證信已寄出',
             'schema': {
                 'type': 'object',
                 'properties': {
                     'message': {
                         'type': 'string',
-                        'example': '請求成功'
+                        'example': '驗證信已成功寄出'
                     }
                 }
             }
         },
         400: {
-            'description': '註冊失敗，輸入無效或電子郵件不存在',
+            'description': '請求失敗，輸入無效或電子郵件不存在',
             'schema': {
                 'type': 'object',
                 'properties': {
                     'message': {
                         'type': 'string',
-                        'example': '此電子郵件不存在'
+                        'example': '此電子郵件不存在或無效'
                     }
                 }
             }
         },
         500: {
-            'description': '伺服器錯誤，可能是資料庫異常',
+            'description': '伺服器錯誤，可能是資料庫或其他問題',
             'schema': {
                 'type': 'object',
                 'properties': {
@@ -692,7 +695,7 @@ def forgotPassword():
     try:
         # 從請求中獲取用戶輸入的電子郵件
         email = request.json.get("email", None)
-        print(email)
+        
         # 檢查電子郵件是否符合規範
         if not is_valid_email(email):
             return jsonify(message="使用者電子郵件不符合規範"), 400
@@ -734,23 +737,26 @@ def forgotPassword():
         logger.error(f"Registration failed: {e}")
         return jsonify(message=f"請求失敗: {str(e)}"), 500
 
+
 @auth_bp.post("/resetPassword")
 @swag_from({
     'tags': ['Authentication'],
     'description': """
-    此API用來處理用戶重設密碼並保存至資料庫。
+    此API用來處理用戶重設密碼請求並保存新密碼至資料庫。
 
     Input:
-        - JSON: 'VerificationCode' 和 'NewPassword'
+        - JSON: 'email', 'verificationCode', 'password1', 和 'password2'
 
     Steps:
         1. 檢查所有必須的字段是否提供且有效。
-        2. 檢查使用者電子郵件是否已被使用。
+        2. 驗證使用者的電子郵件和驗證碼。
+        3. 確認新密碼是否符合強密碼規範且兩次輸入一致。
+        4. 如果驗證通過，則更新用戶密碼並刪除驗證碼。
 
     Returns:
         - JSON 格式的回應消息:
-            - 註冊成功: 包含成功消息。
-            - 註冊失敗: 包含錯誤消息和相應的 HTTP status code。
+            - 密碼更新成功: 包含成功消息。
+            - 密碼更新失敗: 包含錯誤消息和相應的 HTTP 狀態碼。
     """,
     'parameters': [
         {
@@ -765,47 +771,47 @@ def forgotPassword():
                         'description': '用戶電子郵件',
                         'example': 'andy1234@example.com'
                     },
-                    'verficationCode': {
+                    'verificationCode': {
                         'type': 'string',
-                        'description': '驗證碼',
-                        'example': 'andy1234@example.com'
+                        'description': '驗證碼，用來驗證用戶的身份',
+                        'example': '123456'
                     },
                     'password1': {
                         'type': 'string',
-                        'description': '第一次輸入密碼',
+                        'description': '第一次輸入的新密碼',
                         'example': 'ABC1234abc'
                     },
                     'password2': {
                         'type': 'string',
-                        'description': '第二次輸入密碼',
+                        'description': '第二次輸入的新密碼（必須與第一次密碼一致）',
                         'example': 'ABC1234abc'
                     }
                 },
-                'required': ['email', 'verficationCode', 'password1', 'password2']
+                'required': ['email', 'verificationCode', 'password1', 'password2']
             }
         }
     ],
     'responses': {
         200: {
-            'description': '請求成功',
+            'description': '密碼更新成功',
             'schema': {
                 'type': 'object',
                 'properties': {
                     'message': {
                         'type': 'string',
-                        'example': '請求成功'
+                        'example': '密碼更新成功'
                     }
                 }
             }
         },
         400: {
-            'description': '註冊失敗，輸入無效或電子郵件不存在',
+            'description': '請求失敗，驗證碼錯誤、密碼格式錯誤或兩次密碼不一致',
             'schema': {
                 'type': 'object',
                 'properties': {
                     'message': {
                         'type': 'string',
-                        'example': '此電子郵件不存在'
+                        'example': '驗證碼錯誤或密碼不一致'
                     }
                 }
             }
