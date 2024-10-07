@@ -41,7 +41,7 @@ def generate_response(model_dir, input_text,user_id):
             
             num_samples = 5
             if len(df) > num_samples:
-                df_sample = df.sample(n=num_samples)
+                df_sample = df.tail(n=num_samples)
             else:
                 df_sample = df
 
