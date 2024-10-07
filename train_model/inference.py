@@ -2,6 +2,7 @@ import os
 import json
 import random
 import torch
+import pandas as pd
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
 from flask import jsonify, Response
@@ -24,24 +25,34 @@ def generate_response(model_dir, input_text,user_id):
 
         user_history = TrainingFileRepo.find_trainingfile_by_user_id(user_id=user_id)
 
-         # 隨機選取 5 筆歷史資料
-        num_samples = 5
-        if len(user_history) > num_samples:
-            recent_history = random.sample(user_history, num_samples)
-        else:
-            recent_history = user_history
-        
         chat = [
             {"role": "system", "content": "你是我的朋友，請你以和過去回答相同的語氣與我聊天，注意回答的內容要符合問題。"}
         ]
 
-        if recent_history:
-            for history in user_history:
-                chat.append({"role": "user", "content": history["input"]})
-                chat.append({"role": "assistant", "content": history["output"]})
-        
+        if isinstance(user_history, list) and user_history:
+            training_file = random.choice(user_history) 
+        else:
+            training_file = user_history
+
+        file_path = training_file.filename
+
+        if os.path.exists(file_path):
+            df = pd.read_csv(file_path)
+            
+            # 隨機選取 5 筆對話資料
+            num_samples = 5
+            if len(df) > num_samples:
+                df_sample = df.sample(n=num_samples)
+            else:
+                df_sample = df
+
+            # 將隨機選取的對話資料加入 chat 中
+            for _, row in df_sample.iterrows():
+                chat.append({"role": "user", "content": row["input"]})
+                chat.append({"role": "assistant", "content": row["output"]})
+
         chat.append({"role": "user", "content": f"{input_text}"})
-        
+
         prompt = tokenizer.apply_chat_template(chat, tokenize=False, add_generation_prompt=True)
         inputs = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True, max_length=256)
         input_ids = inputs["input_ids"].to(device)
