@@ -8,9 +8,11 @@ from peft import PeftModel
 from flask import jsonify, Response
 import traceback
 from requests.exceptions import RequestException
-from concurrent.futures import TimeoutError
+from concurrent.futures import TimeoutError,ThreadPoolExecutor
 from repository.trainingfile_repo import TrainingFileRepo
 from typing import List
+
+executor = ThreadPoolExecutor(max_workers=10)
 
 def inference(model_dir: str, input_text: str, user_id: str) -> List[str] | None:
     try:
@@ -78,3 +80,13 @@ def inference(model_dir: str, input_text: str, user_id: str) -> List[str] | None
     except Exception as e:
         print(f"Error in inference:{e}")
         return None
+    
+def inference_with_timeout(model_dir: str, input_text: str, user_id: str, timeout_seconds: int = 120):
+    try:
+        future = executor.submit(inference, model_dir, input_text, user_id)
+        
+        return future.result(timeout=timeout_seconds)
+    except TimeoutError:
+        return {"error": "推論超時，請稍後再試"}
+    except Exception as e:
+        return {"error": f"推論過程中出現錯誤: {str(e)}"}

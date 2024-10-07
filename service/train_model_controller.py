@@ -13,7 +13,7 @@ from repository.trainedmodel_repo import TrainedModelRepo
 from repository.trainingfile_repo import TrainingFileRepo
 from service.utils_controller import FILE_DIRECTORY
 from train_model.finetune import BASE_MODEL_DIR, train
-from train_model.inference import inference
+from train_model.inference import inference_with_timeout
 from concurrent.futures import TimeoutError
 from requests.exceptions import RequestException
 from transformers import AutoTokenizer,AutoModelForCausalLM
@@ -210,10 +210,10 @@ def chat():
         return jsonify({"error": "Input text is required"}), 400
 
     try:
-        responses = inference(model_dir, input_text, user_id)
+        responses = inference_with_timeout(model_dir, input_text, user_id)
         
-        if responses is None:
-            return jsonify({"error": "Inference failed"}), 500
+        if isinstance(responses, dict) and 'error' in responses:
+            return jsonify(responses), 500
         
         response_data = {
             "result": [{"input": input_text, "output": response} for response in responses],
