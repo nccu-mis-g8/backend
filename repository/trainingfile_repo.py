@@ -49,14 +49,10 @@ class TrainingFileRepo:
             logging.error(f"Error delete training_file for file {file_id}: {e}")
 
     @staticmethod
-    def update_is_trained(
-        training_file: TrainingFile, is_trained: bool
-    ) -> Optional[TrainingFile]:
-        training_file.set_is_trained(is_trained)
+    def save_training_file():
         try:
             db.session.commit()
-            return training_file
         except Exception as e:
             db.session.rollback()
-            logging.error(f"Error updating file {training_file.id}: {e}")
+            logging.error(f"Error updating file: {e}")
             return None

@@ -2,6 +2,8 @@ from flask import Blueprint, request, Response, jsonify
 from flasgger import swag_from
 import logging
 import json
+import torch
+import random
 
 import traceback
 import time
@@ -11,8 +13,11 @@ from repository.trainedmodel_repo import TrainedModelRepo
 from repository.trainingfile_repo import TrainingFileRepo
 from service.utils_controller import FILE_DIRECTORY
 from train_model.finetune import BASE_MODEL_DIR, train
+from train_model.inference import inference
 from concurrent.futures import TimeoutError
 from requests.exceptions import RequestException
+from transformers import AutoTokenizer,AutoModelForCausalLM
+from peft import PeftModel
 import os
 
 
@@ -65,7 +70,7 @@ def train_model():
     try:
         # 取得user要train的file
         training_file = TrainingFileRepo.find_first_training_file_by_user_id(
-            user_id=user
+            user_id=user_id
         )
         if training_file is None:
             return (
@@ -84,6 +89,8 @@ def train_model():
         new_model = TrainedModelRepo.create_trainedmodel(user_id)
         if new_model is None:
             return jsonify({"status": "Error", "message": "Internel Error"}), 500
+        training_file.start_train = True
+        TrainingFileRepo.save_training_file()
         # 如果是第一次
         if len(saved_models) == 0:
             print("第一次訓練")
@@ -105,7 +112,8 @@ def train_model():
             )
 
         # 把拿去train的資料is_trained設成true
-        TrainingFileRepo.update_is_trained(training_file, True)
+        training_file.is_trained = True
+        TrainingFileRepo.save_training_file()
         return (
             jsonify(
                 {"status": f"Training started successfully. Model id: {new_model.id}"}
@@ -115,83 +123,102 @@ def train_model():
     except Exception as e:
         return jsonify({"status": "Error", "message": str(e)}), 500
 
-
 @train_model_bp.post("/chat")
-# @swag_from(
-#     {
-#         "tags": ["Chat"],
-#         "description": """
-#      此 API 用於啟動聊天服務。
+@swag_from(
+    {
+        "tags": ["Chat"],
+        "description": """
+        這個 API 用來與已訓練模型進行聊天。它接收使用者的輸入文本並返回模型的生成回應。
 
+        Input:
+        - user_info: 包含使用者的基本訊息 (例如 user_Id)。
+        - input_text: 使用者的聊天輸入。
 
-#     Returns:
-#     - JSON 回應訊息：
-#       - 成功時：返回訊息。
-#       - 失敗時：返回錯誤訊息，可能是server錯誤或server反應間間過長。
-#     """,
-#         "parameters": [
-#             {
-#                 "name": "input_text",
-#                 "in": "body",
-#                 "type": "string",
-#                 "required": True,
-#                 "description": "Input text for the chat",
-#             }
-#         ],
-#         "responses": {
-#             200: {
-#                 "description": "Generated chat response",
-#                 "examples": {"application/json": {"response": "Generated text"}},
-#             },
-#             500: {
-#                 "description": "Internal server error",
-#                 "examples": {
-#                     "application/json": {"status": "Error", "message": "Error message"}
-#                 },
-#             },
-#         },
-#     }
-# )
+        Returns:
+        - JSON 回應訊息：
+          - 成功時：返回生成的聊天回應。
+          - 失敗時：返回錯誤消息及相應的 HTTP 狀態碼。
+        """,
+        "parameters": [
+            {
+                "name": "user_info",
+                "in": "formData",
+                "type": "string",
+                "description": "使用者的訊息，包括 user_Id",
+                "required": True
+            },
+            {
+                "name": "input_text",
+                "in": "formData",
+                "type": "string",
+                "description": "使用者的聊天輸入文本",
+                "required": True
+            }
+        ],
+        "responses": {
+            200: {
+                "description": "回應成功",
+                "examples": {
+                    "application/json": {
+                        "res": "這是模型生成的回應",
+                    }
+                }
+            },
+            400: {
+                "description": "輸入錯誤",
+                "examples": {
+                    "application/json": {"error": "Input text is required"}
+                },
+            },
+            404: {
+                "description": "模型未找到",
+                "examples": {
+                    "application/json": {"error": "Model directory not found"}
+                }
+            },
+            500: {
+                "description": "內部錯誤",
+                "examples": {
+                    "application/json": {"error": "Internal server error"}
+                }
+            }
+        },
+    }
+)
 def chat():
+    user_info = request.form.get("user_info")
+    if user_info:
+        user_info = json.loads(user_info)
+    else:
+        return jsonify({"error": "Forbidden"}), 403
+
+    # 獲取 userId
+    user_id = user_info.get("user_Id")
+    trained_model = TrainedModelRepo.find_trainedmodel_by_user_id(user_id=user_id)
+
+    if trained_model is None:
+        return jsonify({"error":"Model not found"}),404
+    
+    model_dir = os.path.abspath(os.path.join("..", "saved_models", trained_model.modelname))
+
+    if not os.path.exists(model_dir):
+        return jsonify({"error": "Model directory not found"}), 404
+        
+    input_text = request.form.get("input_text", "")
+
+    if not input_text:
+        return jsonify({"error": "Input text is required"}), 400
+
     try:
-        input_text = request.json.get("input_text", "")
-        if not input_text:
-            return jsonify({"error": "Input text is required"}), 400
-        instruction = "你是我的朋友，請你以和過去回答相同的語氣與我聊天，注意回答的內容要符合問題。"
-        full_input = [
-            {"role": "system", "content": instruction},
-            {"role": "user", "content": input_text},
-        ]
-
-        start_time = time.time()
-        sequences = generator(
-            full_input,
-            do_sample=True,
-            top_p=0.9,
-            temperature=0.7,
-            num_return_sequences=1,
-            eos_token_id=tokenizer.eos_token_id,
-            # max_new_tokens=50,
-            max_length=70,
-            # truncation=True,
-        )
-
-        # 之後會改小
-        if time.time() - start_time > 3000:
-            return jsonify({"error": "Request timeout, please try again"}), 504
-
-        generated_text = ""
-        for message in sequences[0]["generated_text"]:
-            if message["role"] == "assistant":
-                generated_text = message["content"]
-                break
-
-        response = json.dumps({"response": generated_text}, ensure_ascii=False)
-        return Response(response, content_type="application/json; charset=utf-8")
-
-    except (RequestException, TimeoutError) as e:
-        return jsonify({"error": "Error in generating response, please try again"}), 500
-
+        responses = inference(model_dir, input_text, user_id)
+        
+        if responses is None:
+            return jsonify({"error": "Inference failed"}), 500
+        
+        response_data = {
+            "result": [{"input": input_text, "output": response} for response in responses],
+            "msg": f"成功取得{len(responses)}筆回答"
+        }
+        return Response(json.dumps(response_data, ensure_ascii=False), content_type="application/json; charset=utf-8"), 200
     except Exception as e:
-        traceback.print_exc()
-        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
+        return jsonify({"error": str(e)}), 500

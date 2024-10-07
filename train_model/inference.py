@@ -1,34 +1,79 @@
-from transformers import AutoTokenizer
-import transformers
+import os
+import json
+import random
 import torch
+import pandas as pd
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from peft import PeftModel
+from flask import jsonify, Response
+import traceback
+from requests.exceptions import RequestException
+from concurrent.futures import TimeoutError
+from repository.trainingfile_repo import TrainingFileRepo
+from typing import List
 
-model = "./my-autotrain-llm"
+def inference(model_dir: str, input_text: str, user_id: str) -> List[str] | None:
+    try:
+        model = AutoModelForCausalLM.from_pretrained(model_dir)
+        model = PeftModel.from_pretrained(model, model_dir)
+        tokenizer = AutoTokenizer.from_pretrained(model_dir)
 
-tokenizer = AutoTokenizer.from_pretrained(model)
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        model.to(device)
 
-print("Generating text...")
-pipeline = transformers.pipeline(
-    "text-generation",
-    model=model,
-    torch_dtype=torch.float16,
-    framework="pt"
-)
+        user_history = TrainingFileRepo.find_trainingfile_by_user_id(user_id=user_id)
 
-input_text = '你等等有課嗎？ 請用朋友語氣回答我：'
+        chat = [
+            {"role": "system", "content": "你是我的朋友，請你以和過去回答相同的語氣與我聊天，注意回答的內容要符合問題。"}
+        ]
 
-sequences = pipeline(
-    input_text,
-    do_sample=True,
-    top_p=0.9,
-    temperature=0.6,
-    top_k=10,
-    num_return_sequences=1,
-    eos_token_id=tokenizer.eos_token_id,
-    max_length=50,
-    truncation=True,
-)
+        if isinstance(user_history, list) and user_history:
+            training_file = random.choice(user_history) 
+        else:
+            training_file = user_history
 
-for seq in sequences:
-    generated_text = seq['generated_text']
-    result = generated_text.replace(input_text,"").replace('「', '').replace('」', '').strip()
-    print(f"Result: {result}")
+        if training_file is None:
+            return None
+
+        file_path = training_file.filename
+
+        if os.path.exists(file_path):
+            df = pd.read_csv(file_path)
+            
+            num_samples = 5
+            if len(df) > num_samples:
+                df_sample = df.tail(n=num_samples)
+            else:
+                df_sample = df
+
+            for _, row in df_sample.iterrows():
+                chat.append({"role": "user", "content": row["input"]})
+                chat.append({"role": "assistant", "content": row["output"]})
+
+        chat.append({"role": "user", "content": f"{input_text}"})
+
+        prompt = tokenizer.apply_chat_template(chat, tokenize=False, add_generation_prompt=True)
+        inputs = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True, max_length=256)
+        input_ids = inputs["input_ids"].to(device)
+        attention_mask = inputs["attention_mask"].to(device)
+
+        generate_two_responses = random.random() < 0.5
+        num_return_sequences = 2 if generate_two_responses else 1
+
+        outputs = model.generate(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            do_sample=True,
+            max_length=128,
+            top_k=30,
+            top_p=0.85,
+            temperature=0.6,
+            num_return_sequences=num_return_sequences
+        )
+
+        generated_texts = [tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
+
+        return generated_texts
+    except Exception as e:
+        print(f"Error in inference:{e}")
+        return None

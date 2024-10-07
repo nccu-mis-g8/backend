@@ -10,6 +10,7 @@ class TrainingFile(db.Model):
     filename = db.Column(db.String(50), nullable=False)
     # original_file_name是user上傳時，本機的file name
     original_file_name = db.Column(db.String(255), nullable=False)
+    start_train: bool = db.Column(db.Boolean, default=False, nullable=False)
     is_trained: bool = db.Column(db.Boolean, default=False, nullable=False)
     upload_time = db.Column(DateTime(timezone=True), default=func.now())
 
@@ -18,7 +19,11 @@ class TrainingFile(db.Model):
         self.user_id = user_id
         self.filename = filename
         self.original_file_name = original_file_name
+        self.start_train = False
         self.is_trained = False
+
+    def set_start_train(self, start_train: bool):
+        self.start_train = start_train
 
     def set_is_trained(self, is_trained: bool):
         self.is_trained = is_trained

@@ -137,5 +137,9 @@ def train(id: str, model_dir: str, save_dir: str, data_path: str):
     )
     print("Starting training...")
     trainer.train()
-    print("Saving model...")
+    print("Saving model and tokenizer...")
+    model.save_pretrained(save_dir)
+    tokenizer.save_pretrained(save_dir)
+    
+    model = get_peft_model(model, peft_args)
     model.save_pretrained(save_dir)
