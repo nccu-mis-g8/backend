@@ -65,10 +65,10 @@ def generate_response(model_dir, input_text,user_id):
             input_ids=input_ids,
             attention_mask=attention_mask,
             do_sample=True,
-            max_length=256,
-            top_k=50,
-            top_p=0.95,
-            temperature=0.7,
+            max_length=128,
+            top_k=30,
+            top_p=0.85,
+            temperature=0.6,
             num_return_sequences=num_return_sequences
         )
 
@@ -78,7 +78,7 @@ def generate_response(model_dir, input_text,user_id):
         for generated_text in generated_texts:
             result_data.append({
                 "input": input_text,
-                "output": generated_text
+                "output": generated_text.strip()
             })
 
         response_data = {
