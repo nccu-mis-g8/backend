@@ -74,14 +74,17 @@ def generate_response(model_dir, input_text,user_id):
 
         generated_texts = [tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
 
-        if num_return_sequences == 2:
-            response_data = {
-                "res1": generated_texts[0],
-                "res2": generated_texts[1],
-                "mes": "選擇您認為更好的回答"
-            }
-        else:
-            response_data = {"res": generated_texts[0]}
+        result_data = []
+        for generated_text in generated_texts:
+            result_data.append({
+                "input": input_text,
+                "output": generated_text
+            })
+
+        response_data = {
+            "result": result_data,
+            "msg": f"成功取得{len(result_data)}筆回答"
+        }
 
         response = json.dumps(response_data, ensure_ascii=False)
         return Response(response, content_type="application/json; charset=utf-8")
@@ -91,4 +94,3 @@ def generate_response(model_dir, input_text,user_id):
     except Exception as e:
         traceback.print_exc()
         return jsonify({"error": f"Internal server error: {str(e)}"}), 500
-
