@@ -10,6 +10,7 @@ import traceback
 from requests.exceptions import RequestException
 from concurrent.futures import TimeoutError
 from repository.trainingfile_repo import TrainingFileRepo
+from typing import List
 
 def inference(model_dir: str, input_text: str, user_id: str) -> List[str] | None:
     try:
