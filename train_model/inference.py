@@ -39,14 +39,12 @@ def generate_response(model_dir, input_text,user_id):
         if os.path.exists(file_path):
             df = pd.read_csv(file_path)
             
-            # 隨機選取 5 筆對話資料
             num_samples = 5
             if len(df) > num_samples:
                 df_sample = df.sample(n=num_samples)
             else:
                 df_sample = df
 
-            # 將隨機選取的對話資料加入 chat 中
             for _, row in df_sample.iterrows():
                 chat.append({"role": "user", "content": row["input"]})
                 chat.append({"role": "assistant", "content": row["output"]})
