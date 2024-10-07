@@ -11,11 +11,9 @@ from requests.exceptions import RequestException
 from concurrent.futures import TimeoutError
 from repository.trainingfile_repo import TrainingFileRepo
 
-def generate_response(model_dir, input_text,user_id):
+def inference(model_dir: str, input_text: str, user_id: str) -> List[str] | None:
     try:
-        if not os.path.exists(model_dir):
-            return jsonify({"error": "Model directory not found"}), 404
-
+    
         model = AutoModelForCausalLM.from_pretrained(model_dir)
         model = PeftModel.from_pretrained(model, model_dir)
         tokenizer = AutoTokenizer.from_pretrained(model_dir)
@@ -33,6 +31,9 @@ def generate_response(model_dir, input_text,user_id):
             training_file = random.choice(user_history) 
         else:
             training_file = user_history
+
+        if training_file is None:
+            return None
 
         file_path = training_file.filename
 
@@ -72,23 +73,7 @@ def generate_response(model_dir, input_text,user_id):
 
         generated_texts = [tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
 
-        result_data = []
-        for generated_text in generated_texts:
-            result_data.append({
-                "input": input_text,
-                "output": generated_text.strip()
-            })
-
-        response_data = {
-            "result": result_data,
-            "msg": f"成功取得{len(result_data)}筆回答"
-        }
-
-        response = json.dumps(response_data, ensure_ascii=False)
-        return Response(response, content_type="application/json; charset=utf-8")
-
-    except (RequestException, TimeoutError) as e:
-        return jsonify({"error": "Error in generating response, please try again"}), 500
+        return generated_texts
     except Exception as e:
-        traceback.print_exc()
-        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
+        print(f"Error in inference:{e}")
+        return None
