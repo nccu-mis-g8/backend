@@ -219,6 +219,6 @@ def chat():
             "result": [{"input": input_text, "output": response} for response in responses],
             "msg": f"成功取得{len(responses)}筆回答"
         }
-        return jsonify(response_data), 200
+        return Response(json.dumps(response_data, ensure_ascii=False), content_type="application/json; charset=utf-8"), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
