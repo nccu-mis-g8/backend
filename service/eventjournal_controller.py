@@ -475,12 +475,14 @@ def get_event(event_id):
             'example': 1
         },
         {
-            'name': 'Authorization',
-            'in': 'header',
-            'required': True,
-            'type': 'string',
-            'description': 'Bearer token for authentication',
-            'example': 'Bearer your_access_token_here'
+            "name": "Authorization",
+            "in": "header",
+            "required": True,
+            "description": "Bearer token for authorization",
+            "schema": {
+                "type": "string",
+                "example": "Bearer "
+            }
         },
         {
             'name': 'body',
