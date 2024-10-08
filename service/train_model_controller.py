@@ -10,6 +10,7 @@ import traceback
 import time
 
 from sqlalchemy.sql.functions import user
+from models.user import User
 from repository.trainedmodel_repo import TrainedModelRepo
 from repository.trainingfile_repo import TrainingFileRepo
 from service.utils_controller import FILE_DIRECTORY
