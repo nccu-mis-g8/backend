@@ -619,7 +619,7 @@ def update_event(event_id):
         return jsonify(message="更新事件時發生錯誤", error=str(e)), 500
     
 
-@event_bp.delete("/api/event/<int:event_id>")
+@event_bp.delete("/delete_event/<int:event_id>")
 @jwt_required()
 @swag_from({
     'tags': ['EventJournal'],
