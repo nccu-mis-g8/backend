@@ -34,12 +34,14 @@ logger = logging.getLogger(__name__)
     """,
     'parameters': [
         {
-            'name': 'Authorization',
-            'in': 'header',
-            'required': True,
-            'type': 'string',
-            'description': 'Bearer token for authentication (access token)',
-            'example': 'Bearer YOUR_ACCESS_TOKEN'
+            "name": "Authorization",
+            "in": "header",
+            "required": True,
+            "description": "Bearer token for authorization",
+            "schema": {
+                "type": "string",
+                "example": "Bearer "
+            }
         },
         {
             'name': 'body',
