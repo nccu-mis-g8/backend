@@ -22,9 +22,26 @@ def allowed_file(filename, extensions):
 @jwt_required()
 @swag_from({
     "tags": ["UserInfo"],
-    "description": "此API 用於上傳使用者頭貼，支援格式為 JPG, JPEG, PNG。",
+    "description": """
+    此API 用於上傳使用者頭貼，支援格式為 JPG, JPEG, PNG。
+
+    Input:
+    - `Authorization` header 必須包含 Bearer token 以進行身份驗證。
+    - user_info: 包含使用者的基本訊息 (例如 user_Id)。
+    - file: 要上傳的圖像檔案 (JPG, JPEG, PNG)。
+    """,
     "consumes": ["multipart/form-data"],
     "parameters": [
+        {
+            "name": "Authorization",
+            "in": "header",
+            "required": True,
+            "description": "Bearer token for authorization",
+            "schema": {
+                "type": "string",
+                "example": "Bearer "
+            }
+        },
         {
             "name": "user_info",
             "in": "formData",
@@ -41,13 +58,13 @@ def allowed_file(filename, extensions):
         },
     ],
     "responses": {
-        "200": {
+        200: {
             "description": "File uploaded successfully",
             "examples": {
                 "application/json": {"message": "File uploaded successfully"}
             },
         },
-        "400": {
+        400: {
             "description": "Bad request due to missing file, wrong file type, or invalid user information",
             "examples": {
                 "application/json": {
@@ -57,15 +74,15 @@ def allowed_file(filename, extensions):
                 }
             },
         },
-        "403": {
+        403: {
             "description": "Forbidden request due to missing or invalid user information",
             "examples": {"application/json": {"error": "Forbidden"}},
         },
-        "404": {
+        404: {
             "description": "User ID not found",
             "examples": {"application/json": {"error": "User ID not found"}},
         },
-        "500": {
+        500: {
             "description": "Internal server error occurred while processing the request",
             "examples": {"application/json": {"error": "Internal Server Error"}},
         },
