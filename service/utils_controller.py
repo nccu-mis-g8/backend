@@ -24,6 +24,7 @@ def allowed_file(filename, extension):
 
 
 @utils_bp.post("/user/upload_csv_file")
+@jwt_required()
 @swag_from(
     {
         "tags": ["Utils"],
@@ -124,6 +125,7 @@ def upload_csv_file():
         )
 
 @utils_bp.get('/user/training_files/<int:user_id>')
+@jwt_required()
 @swag_from({
     "tags": ["Utils"],
     'description': '此 api 用於拿到指定 user_id 的 training file',
@@ -212,6 +214,7 @@ def get_user_training_files(user_id):
     
     
 @utils_bp.post('/user/upload_txt_file')
+@jwt_required()
 @swag_from({
     "tags": ["Utils"],
     'description': '此 api 用於上傳 txt file，然後轉為 csv fil儲存',
