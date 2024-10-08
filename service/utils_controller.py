@@ -4,6 +4,7 @@ from flask import (
     jsonify,
 )
 from flasgger import swag_from
+from flask_jwt_extended import get_jwt_identity, jwt_required
 from repository.trainingfile_repo import TrainingFileRepo
 from models.user import User
 import json
