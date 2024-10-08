@@ -28,8 +28,25 @@ def allowed_file(filename, extension):
 @swag_from(
     {
         "tags": ["Utils"],
-        "description": "此API 用於上傳 CSV 檔案",
+        "description": """
+        此API 用於上傳 CSV 檔案。
+
+        Input:
+        - `Authorization` header 必須包含 Bearer token 以進行身份驗證。
+        - user_info: 使用者的資訊，必須是 JSON 格式。
+        - file: 要上傳的 CSV 檔案。
+        """,
         "parameters": [
+            {
+                "name": "Authorization",
+                "in": "header",
+                "required": True,
+                "description": "Bearer token for authorization",
+                "schema": {
+                    "type": "string",
+                    "example": "Bearer "
+                }
+            },
             {
                 "name": "user_info",
                 "in": "formData",
