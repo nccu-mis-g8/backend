@@ -2,6 +2,7 @@ from flask import Blueprint, request, Response, jsonify
 from flasgger import swag_from
 import logging
 import json
+from flask_jwt_extended import get_jwt_identity, jwt_required
 import torch
 import random
 
