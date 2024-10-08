@@ -37,12 +37,35 @@ logger = logging.getLogger(__name__)
 
     Input:
     - 可以接受與微調相關的任何參數，若未填寫則使用 default 參數。
+    - `Authorization` header 必須包含 Bearer token 以進行身份驗證。
 
     Returns:
     - JSON 回應訊息：
       - 成功時：返回開始訓練。
       - 失敗時：返回錯誤消息及相應的 HTTP 狀態碼。
     """,
+        "parameters": [
+            {
+                "name": "Authorization",
+                "in": "header",
+                "required": True,
+                "description": "Bearer token for authorization",
+                "schema": {
+                    "type": "string",
+                    "example": "Bearer "
+                }
+            },
+            {
+                "name": "user_info",
+                "in": "formData",
+                "required": False,
+                "description": "User information in JSON format. Required if not using default parameters.",
+                "schema": {
+                    "type": "string",
+                    "example": '{"user_Id": "12345"}'
+                }
+            },
+        ],
         "responses": {
             200: {
                 "description": "Training started successfully",
@@ -52,10 +75,37 @@ logger = logging.getLogger(__name__)
                     }
                 },
             },
+            400: {
+                "description": "Bad request, no file to train",
+                "examples": {
+                    "application/json": {
+                        "status": "no file to train"
+                    }
+                }
+            },
+            403: {
+                "description": "Forbidden, user info not provided",
+                "examples": {
+                    "application/json": {
+                        "error": "Forbidden"
+                    }
+                }
+            },
+            404: {
+                "description": "User not found",
+                "examples": {
+                    "application/json": {
+                        "message": "使用者不存在"
+                    }
+                }
+            },
             500: {
                 "description": "Internal server error",
                 "examples": {
-                    "application/json": {"status": "Error", "message": "Error message"}
+                    "application/json": {
+                        "status": "Error", 
+                        "message": "Error message"
+                    }
                 },
             },
         },
