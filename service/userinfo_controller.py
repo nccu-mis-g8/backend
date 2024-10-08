@@ -5,6 +5,8 @@ from flasgger import swag_from
 import logging
 import json
 
+from flask_jwt_extended import get_jwt_identity, jwt_required
+
 from repository.userphoto_repo import UserPhotoRepo
 from models.user import User
 
