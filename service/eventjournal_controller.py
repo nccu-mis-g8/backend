@@ -447,7 +447,7 @@ def get_event(event_id):
         return jsonify(message="查詢事件時發生錯誤", error=str(e)), 500
 
 
-@event_bp.put("/api/event/<int:event_id>")
+@event_bp.put("/update_event/<int:event_id>")
 @jwt_required()
 @swag_from({
     'tags': ['EventJournal'],
