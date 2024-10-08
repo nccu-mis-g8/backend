@@ -263,8 +263,23 @@ def get_user_training_files(user_id):
 @jwt_required()
 @swag_from({
     "tags": ["Utils"],
-    'description': '此 api 用於上傳 txt file，然後轉為 csv fil儲存',
-    'parameters': [
+    "description": """
+    此 API 用於上傳 txt file，然後轉為 csv file 儲存。
+
+    Input:
+    - `Authorization` header 必須包含 Bearer token 以進行身份驗證。
+    """,
+    "parameters": [
+        {
+            "name": "Authorization",
+            "in": "header",
+            "required": True,
+            "description": "Bearer token for authorization",
+            "schema": {
+                "type": "string",
+                "example": "Bearer "
+            }
+        },
         {
             'name': 'user_info',
             'in': 'formData',
