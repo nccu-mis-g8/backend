@@ -192,6 +192,7 @@ def train_model():
         這個 API 用來與已訓練模型進行聊天。它接收使用者的輸入文本並返回模型的生成回應。
 
         Input:
+        - `Authorization` header 必須包含 Bearer token 以進行身份驗證。
         - user_info: 包含使用者的基本訊息 (例如 user_Id)。
         - input_text: 使用者的聊天輸入。
 
@@ -201,6 +202,16 @@ def train_model():
           - 失敗時：返回錯誤消息及相應的 HTTP 狀態碼。
         """,
         "parameters": [
+            {
+                "name": "Authorization",
+                "in": "header",
+                "required": True,
+                "description": "Bearer token for authorization",
+                "schema": {
+                    "type": "string",
+                    "example": "Bearer "
+                }
+            },
             {
                 "name": "user_info",
                 "in": "formData",
