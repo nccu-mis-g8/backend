@@ -112,6 +112,13 @@ logger = logging.getLogger(__name__)
     }
 )
 def train_model():
+    current_email = get_jwt_identity()
+    
+    # 從資料庫中查詢使用者
+    user = User.get_user_by_email(current_email)
+    if user is None:
+        return jsonify(message="使用者不存在"), 404
+    
     user_info = request.form.get("user_info")
     if user_info:
         user_info = json.loads(user_info)
