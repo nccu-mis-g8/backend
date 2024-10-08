@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 @train_model_bp.post("/train_model")
+@jwt_required()
 @swag_from(
     {
         "tags": ["Train"],
@@ -126,6 +127,7 @@ def train_model():
         return jsonify({"status": "Error", "message": str(e)}), 500
 
 @train_model_bp.post("/chat")
+@jwt_required()
 @swag_from(
     {
         "tags": ["Chat"],
