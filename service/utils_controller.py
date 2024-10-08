@@ -152,8 +152,24 @@ def upload_csv_file():
 @jwt_required()
 @swag_from({
     "tags": ["Utils"],
-    'description': '此 api 用於拿到指定 user_id 的 training file',
-    'parameters': [
+    "description": """
+    此 API 用於拿到指定 user_id 的 training file。
+
+    Input:
+    - `Authorization` header 必須包含 Bearer token 以進行身份驗證。
+    - user_id: 路徑參數，指定用戶 ID 來獲取相應的訓練檔案。
+    """,
+    "parameters": [
+        {
+            "name": "Authorization",
+            "in": "header",
+            "required": True,
+            "description": "Bearer token for authorization",
+            "schema": {
+                "type": "string",
+                "example": "Bearer "
+            }
+        },
         {
             'name': 'user_id',
             'in': 'path',
