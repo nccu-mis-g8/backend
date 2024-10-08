@@ -19,6 +19,7 @@ def allowed_file(filename, extensions):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in extensions
 
 @userinfo_bp.post("/user/upload_photo")
+@jwt_required()
 @swag_from({
     "tags": ["UserInfo"],
     "description": "此API 用於上傳使用者頭貼，支援格式為 JPG, JPEG, PNG。",
@@ -142,6 +143,7 @@ def upload_photo():
 
 
 @userinfo_bp.get("/user/get_photo/<int:user_id>")
+@jwt_required()
 @swag_from({
         "tags": ["UserInfo"],
         "description": "此API用於拿取使用者頭貼 (JPG, JPEG, PNG)",
