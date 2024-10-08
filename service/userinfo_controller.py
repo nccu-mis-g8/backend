@@ -169,53 +169,68 @@ def upload_photo():
 @userinfo_bp.get("/user/get_photo/<int:user_id>")
 @jwt_required()
 @swag_from({
-        "tags": ["UserInfo"],
-        "description": "此API用於拿取使用者頭貼 (JPG, JPEG, PNG)",
-        "parameters": [
-            {
-                "name": "user_id",
-                "in": "path",
-                "type": "integer",
-                "required": True,
-                "description": "使用者的唯一ID",
-            },
-        ],
-        "responses": {
-            "200": {
-                "description": "成功回傳使用者頭像",
-                "content": {
-                    "image/jpeg": {},
-                    "image/png": {},
-                    "image/jpg": {}
-                }
-            },
-            "403": {
-                "description": "禁止請求",
-                "content": {
-                    "application/json": {
-                        "example": {"error": "Forbidden"}
-                    }
-                }
-            },
-            "404": {
-                "description": "使用者或照片找不到",
-                "content": {
-                    "application/json": {
-                        "example": {"error": "User ID not found"}
-                    }
-                }
-            },
-            "500": {
-                "description": "內部伺服器錯誤",
-                "content": {
-                    "application/json": {
-                        "example": {"error": "Internal Server Error"}
-                    }
-                }
-            },
+    "tags": ["UserInfo"],
+    "description": """
+    此API用於拿取使用者頭貼，支援格式為 JPG, JPEG, PNG。
+
+    Input:
+    - `Authorization` header 必須包含 Bearer token 以進行身份驗證。
+    - user_id: 使用者的唯一ID，用來查找並返回對應的頭像。
+    """,
+    "parameters": [
+        {
+            "name": "Authorization",
+            "in": "header",
+            "required": True,
+            "description": "Bearer token for authorization",
+            "schema": {
+                "type": "string",
+                "example": "Bearer "
+            }
         },
-    }
-)
+        {
+            "name": "user_id",
+            "in": "path",
+            "type": "integer",
+            "required": True,
+            "description": "使用者的唯一ID",
+        },
+    ],
+    "responses": {
+        200: {
+            "description": "成功回傳使用者頭像",
+            "content": {
+                "image/jpeg": {},
+                "image/png": {},
+                "image/jpg": {}
+            }
+        },
+        403: {
+            "description": "禁止請求",
+            "content": {
+                "application/json": {
+                    "example": {"error": "Forbidden"}
+                }
+            }
+        },
+        404: {
+            "description": "使用者或照片找不到",
+            "content": {
+                "application/json": {
+                    "example": {"error": "User ID not found"}
+                }
+            }
+        },
+        500: {
+            "description": "內部伺服器錯誤",
+            "content": {
+                "application/json": {
+                    "example": {"error": "Internal Server Error"}
+                }
+            }
+        },
+    },
+})
 def get_photo(user_id):
     current_email = get_jwt_identity()
     
