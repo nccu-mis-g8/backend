@@ -12,7 +12,6 @@ from sqlalchemy.exc import SQLAlchemyError
 from utils.validators import is_valid_email, is_strong_password
 import logging
 
-from werkzeug.security import generate_password_hash
 import utils.mail_sender as mail_sender
 from repository.password_verification_repo import PasswordVerificationCodeRepo
 import pyotp
