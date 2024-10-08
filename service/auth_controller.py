@@ -461,12 +461,14 @@ def refresh():
     """,
     'parameters': [
         {
-            'name': 'Authorization',
-            'in': 'header',
-            'type': 'string',
-            'required': True,
-            'description': 'Bearer Token，使用者的 Access Token，格式為 "Bearer <token>"',
-            'example': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+            "name": "Authorization",
+            "in": "header",
+            "required": True,
+            "description": "Bearer token for authorization",
+            "schema": {
+                "type": "string",
+                "example": "Bearer "
+            }
         }
     ],
     'responses': {
