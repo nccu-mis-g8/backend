@@ -217,6 +217,12 @@ def upload_photo():
     }
 )
 def get_photo(user_id):
+    current_email = get_jwt_identity()
+    
+    # 從資料庫中查詢使用者
+    user = User.get_user_by_email(current_email)
+    if user is None:
+        return jsonify(message="使用者不存在"), 404
     
     # 確認使用者是否存在
     user_exists = User.is_user_id_exists(user_id)
