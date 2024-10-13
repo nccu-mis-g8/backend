@@ -125,10 +125,12 @@ def upload_csv_file():
         current_file = TrainingFileRepo.find_first_training_file_by_user_id(
             user_id=user_id
         )
+
         is_renew = False  # 是否是覆蓋舊的
         # 上傳新的覆蓋舊的，把舊的file實體刪除
         if current_file is not None and (current_file.is_trained is False):
-            os.remove(current_file.filename)
+            delete_file_path = os.path.join(FILE_DIRECTORY, current_file.filename)
+            os.remove(delete_file_path)
             TrainingFileRepo.delete_training_file_by_file_id(current_file.id)
             is_renew = True
         # 儲存檔案
