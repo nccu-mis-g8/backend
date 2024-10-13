@@ -10,7 +10,7 @@ from models.user import User
 import json
 import os
 import logging
-import linetxt_to_llama
+import utils.linetxt_to_llama as linetxt_to_llama
 
 utils_bp = Blueprint("utils", __name__)
 logger = logging.getLogger(__name__)
@@ -99,6 +99,11 @@ def upload_csv_file():
 
     # 獲取 userId
     user_id = user_info.get("user_Id")
+    
+    # 確認使用者是否存在
+    user_exists = User.is_user_id_exists(user_id)
+    if not user_exists:
+        return jsonify({"error": "User ID not found"}), 404
 
     # 確認 request 中是否有檔案
     if "file" not in request.files:
@@ -120,10 +125,12 @@ def upload_csv_file():
         current_file = TrainingFileRepo.find_first_training_file_by_user_id(
             user_id=user_id
         )
+
         is_renew = False  # 是否是覆蓋舊的
         # 上傳新的覆蓋舊的，把舊的file實體刪除
         if current_file is not None and (current_file.is_trained is False):
-            os.remove(current_file.filename)
+            delete_file_path = os.path.join(FILE_DIRECTORY, current_file.filename)
+            os.remove(delete_file_path)
             TrainingFileRepo.delete_training_file_by_file_id(current_file.id)
             is_renew = True
         # 儲存檔案
@@ -437,7 +444,7 @@ def upload_txt_file():
 
         # 儲存檔案
         saved_file = TrainingFileRepo.create_trainingfile(
-            user_id=user_id, original_file_name=file.filename
+            user_id=user_id, original_file_name=file.filename, filename=csv_file_name
         )
         if saved_file is None:
             return jsonify({"error": "Unable to create file."}), 500
