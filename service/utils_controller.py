@@ -153,7 +153,7 @@ def upload_csv_file():
         )
 
 
-@utils_bp.get("/user/training_files/<int:user_id>")
+@utils_bp.post("/user/training_files")
 @jwt_required()
 @swag_from(
     {
