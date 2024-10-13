@@ -159,11 +159,11 @@ def upload_csv_file():
     {
         "tags": ["Utils"],
         "description": """
-    此 API 用於拿到指定 user_id 的 training file。
+    此 API 用於拿到指定 user_Id 的訓練檔案。用戶必須通過 Bearer token 進行身份驗證，並且在請求體中提供 `user_Id` 來獲取相應的訓練檔案。
 
     Input:
     - `Authorization` header 必須包含 Bearer token 以進行身份驗證。
-    - user_id: 路徑參數，指定用戶 ID 來獲取相應的訓練檔案。
+    - `user_Id` 在請求體中傳遞，指定用戶 ID 來獲取訓練檔案。
     """,
         "parameters": [
             {
@@ -174,13 +174,13 @@ def upload_csv_file():
                 "schema": {"type": "string", "example": "Bearer "},
             },
             {
-                "name": "user_id",
-                "in": "path",
-                "type": "integer",
+                "name": "user_Id",
+                "in": "formData",
+                "type": "string",
                 "required": True,
-                "description": "The ID of the user whose training file is being retrieved.",
-                "schema": {"type": "integer", "example": 1},
-            },
+                "description": "User id in JSON format",
+                "example": '{"user_Id": "5"}'
+            }
         ],
         "responses": {
             "200": {
@@ -189,7 +189,7 @@ def upload_csv_file():
                     "type": "object",
                     "properties": {
                         "id": {"type": "integer", "example": 1},
-                        "user_id": {"type": "integer", "example": 123},
+                        "user_Id": {"type": "integer", "example": 123},
                         "filename": {"type": "string", "example": "file.csv"},
                         "original_file_name": {
                             "type": "string",
@@ -204,11 +204,11 @@ def upload_csv_file():
                 },
             },
             "400": {
-                "description": "Invalid user_id",
+                "description": "Invalid user_Id",
                 "schema": {
                     "type": "object",
                     "properties": {
-                        "message": {"type": "string", "example": "Invalid user_id"}
+                        "message": {"type": "string", "example": "Invalid user_Id"},
                     },
                 },
             },
@@ -219,8 +219,8 @@ def upload_csv_file():
                     "properties": {
                         "message": {
                             "type": "string",
-                            "example": "No training files found for this user.",
-                        }
+                            "example": "No training files found for this user。",
+                        },
                     },
                 },
             },
@@ -231,8 +231,8 @@ def upload_csv_file():
                     "properties": {
                         "message": {
                             "type": "string",
-                            "example": "An error occurred while fetching training files.",
-                        }
+                            "example": "An error occurred while fetching training files。",
+                        },
                     },
                 },
             },
