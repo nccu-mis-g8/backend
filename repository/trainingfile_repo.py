@@ -7,8 +7,8 @@ import logging
 
 class TrainingFileRepo:
     @staticmethod
-    def create_trainingfile(user_id, original_file_name) -> Optional[TrainingFile]:
-        file = TrainingFile(user_id=user_id, original_file_name=original_file_name)
+    def create_trainingfile(user_id, original_file_name, filename=None) -> Optional[TrainingFile]:
+        file = TrainingFile(user_id=user_id, original_file_name=original_file_name, filename=filename)
         db.session.add(file)
         try:
             db.session.commit()
