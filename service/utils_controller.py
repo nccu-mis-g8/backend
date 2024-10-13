@@ -437,7 +437,7 @@ def upload_txt_file():
 
         # 儲存檔案
         saved_file = TrainingFileRepo.create_trainingfile(
-            user_id=user_id, filename=csv_file_name, original_file_name=file.filename
+            user_id=user_id, original_file_name=file.filename
         )
         if saved_file is None:
             return jsonify({"error": "Unable to create file."}), 500
