@@ -99,6 +99,11 @@ def upload_csv_file():
 
     # 獲取 userId
     user_id = user_info.get("user_Id")
+    
+    # 確認使用者是否存在
+    user_exists = User.is_user_id_exists(user_id)
+    if not user_exists:
+        return jsonify({"error": "User ID not found"}), 404
 
     # 確認 request 中是否有檔案
     if "file" not in request.files:
