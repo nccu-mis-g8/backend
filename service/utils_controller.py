@@ -239,27 +239,29 @@ def upload_csv_file():
         },
     }
 )
-def get_user_training_files(user_id):
+def get_user_training_files():
     current_email = get_jwt_identity()
 
     # 從資料庫中查詢使用者
     user = User.get_user_by_email(current_email)
     if user is None:
         return jsonify(message="使用者不存在"), 404
+    
+    user_Id = request.form.get("user_Id")
 
     # 確認使用者是否存在
-    user_exists = User.is_user_id_exists(user_id)
+    user_exists = User.is_user_id_exists(user_Id)
     if not user_exists:
         return jsonify({"error": "User ID not found"}), 404
-
+    
     try:
-        training_file = TrainingFileRepo.find_first_training_file_by_user_id(user_id)
+        training_file = TrainingFileRepo.find_first_training_file_by_user_id(user_Id)
 
         if not training_file:
             return jsonify({"message": "No training files found for this user."}), 404
 
     except Exception as e:
-        logging.error(f"Error retrieving training files for user {user_id}: {e}")
+        logging.error(f"Error retrieving training files for user {user}: {e}")
         return (
             jsonify({"message": "An error occurred while fetching training files."}),
             500,
