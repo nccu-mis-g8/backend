@@ -10,7 +10,7 @@ from models.user import User
 import json
 import os
 import logging
-import linetxt_to_llama
+import utils.linetxt_to_llama as linetxt_to_llama
 
 utils_bp = Blueprint("utils", __name__)
 logger = logging.getLogger(__name__)
