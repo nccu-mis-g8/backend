@@ -6,6 +6,8 @@ from models.user import User
 from datetime import datetime, timezone
 from repository.event_journal_repo import EventJournalRepository
 
+from utils import chroma
+
 event_bp  = Blueprint("event", __name__)
 logger = logging.getLogger(__name__)
 
@@ -148,6 +150,7 @@ def create_event():
     # 驗證事件標題和內容是否為空
     event_title = data.get('event_title')
     event_content = data.get('event_content')
+    
 
     if not event_title or not event_content:
         return jsonify({"msg": "標題和內容不能為空"}), 400
@@ -155,6 +158,13 @@ def create_event():
     try:
         # 創建新的事件
         event = EventJournalRepository.create_event(user.id, event_title, event_content)
+
+        #新增到向量資料庫
+        collection_name = f"collection_{user.id}"
+        collection = chroma.create_collection(collection_name)
+        metadata = {"user_id": user.id, "event_title": event_title}
+        chroma.add_document(collection=collection, document=f"{event_title}是{event_content}", id=str(event.id),metadata=metadata)
+
         return jsonify({
             "msg": "事件創建成功",
             "event_id": event.id,
@@ -602,7 +612,10 @@ def update_event(event_id):
     try:
         # 將變更保存到資料庫
         updated_event = EventJournalRepository.update_event(event.id, event_title, event_content, updated_at)
-
+        collection_name = f"collection_{user.id}"   
+        collection = chroma.create_collection(collection_name)
+        metadata = {"user_id": user.id, "event_title": event_title}
+        chroma.update_document(collection=collection, id=str(event.id), document=f"{event_title}是{event_content}", metadata=metadata)
         # 構建回應
         updated_event_response = {
             'event_id': updated_event.id,
@@ -721,6 +734,9 @@ def delete_event(event_id):
         # 從資料庫中刪除事件
         EventJournalRepository.delete_event(event_id)
 
+        collection_name = f"collection_{user.id}"
+        collection = chroma.create_collection(collection_name)
+        chroma.delete_document(collection=collection, id=str(event.id))
         # 返回成功的回應
         return jsonify(message="事件已成功刪除"), 204
 
