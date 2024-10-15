@@ -21,11 +21,10 @@ def inference(model_dir: str, input_text: str, user_id: str) -> List[str] | None
             model_dir,
             device_map=device_map,
         )
+        print("checkpoint 0")
         model = PeftModel.from_pretrained(model, model_dir)
+        print("checkpoint 1")
         tokenizer = AutoTokenizer.from_pretrained(model_dir)
-
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        model.to(device)
 
         user_history = TrainingFileRepo.find_trainingfile_by_user_id(user_id=user_id)
 
