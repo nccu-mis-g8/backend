@@ -99,7 +99,7 @@ def upload_csv_file():
 
     # 獲取 userId
     user_id = user_info.get("user_Id")
-    
+
     # 確認使用者是否存在
     user_exists = User.is_user_id_exists(user_id)
     if not user_exists:
@@ -179,8 +179,8 @@ def upload_csv_file():
                 "type": "string",
                 "required": True,
                 "description": "User id in JSON format",
-                "example": '{"user_Id": "5"}'
-            }
+                "example": '{"user_Id": "5"}',
+            },
         ],
         "responses": {
             "200": {
@@ -246,14 +246,14 @@ def get_user_training_files():
     user = User.get_user_by_email(current_email)
     if user is None:
         return jsonify(message="使用者不存在"), 404
-    
+
     user_Id = request.form.get("user_Id")
 
     # 確認使用者是否存在
     user_exists = User.is_user_id_exists(user_Id)
     if not user_exists:
         return jsonify({"error": "User ID not found"}), 404
-    
+
     try:
         training_file = TrainingFileRepo.find_first_training_file_by_user_id(user_Id)
 

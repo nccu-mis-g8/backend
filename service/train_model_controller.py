@@ -18,7 +18,7 @@ from train_model.finetune import BASE_MODEL_DIR, train
 from train_model.inference import inference
 from concurrent.futures import TimeoutError
 from requests.exceptions import RequestException
-from transformers import AutoTokenizer,AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForCausalLM
 from peft import PeftModel
 import os
 
@@ -50,20 +50,14 @@ logger = logging.getLogger(__name__)
                 "in": "header",
                 "required": True,
                 "description": "Bearer token for authorization",
-                "schema": {
-                    "type": "string",
-                    "example": "Bearer "
-                }
+                "schema": {"type": "string", "example": "Bearer "},
             },
             {
                 "name": "user_info",
                 "in": "formData",
                 "required": False,
                 "description": "User information in JSON format. Required if not using default parameters.",
-                "schema": {
-                    "type": "string",
-                    "example": '{"user_Id": "12345"}'
-                }
+                "schema": {"type": "string", "example": '{"user_Id": "12345"}'},
             },
         ],
         "responses": {
@@ -77,35 +71,20 @@ logger = logging.getLogger(__name__)
             },
             400: {
                 "description": "Bad request, no file to train",
-                "examples": {
-                    "application/json": {
-                        "status": "no file to train"
-                    }
-                }
+                "examples": {"application/json": {"status": "no file to train"}},
             },
             403: {
                 "description": "Forbidden, user info not provided",
-                "examples": {
-                    "application/json": {
-                        "error": "Forbidden"
-                    }
-                }
+                "examples": {"application/json": {"error": "Forbidden"}},
             },
             404: {
                 "description": "User not found",
-                "examples": {
-                    "application/json": {
-                        "message": "使用者不存在"
-                    }
-                }
+                "examples": {"application/json": {"message": "使用者不存在"}},
             },
             500: {
                 "description": "Internal server error",
                 "examples": {
-                    "application/json": {
-                        "status": "Error", 
-                        "message": "Error message"
-                    }
+                    "application/json": {"status": "Error", "message": "Error message"}
                 },
             },
         },
@@ -113,12 +92,12 @@ logger = logging.getLogger(__name__)
 )
 def train_model():
     current_email = get_jwt_identity()
-    
+
     # 從資料庫中查詢使用者
     user = User.get_user_by_email(current_email)
     if user is None:
         return jsonify(message="使用者不存在"), 404
-    
+
     user_info = request.form.get("user_info")
     if user_info:
         user_info = json.loads(user_info)
@@ -183,6 +162,7 @@ def train_model():
     except Exception as e:
         return jsonify({"status": "Error", "message": str(e)}), 500
 
+
 @train_model_bp.post("/chat")
 @jwt_required()
 @swag_from(
@@ -207,25 +187,22 @@ def train_model():
                 "in": "header",
                 "required": True,
                 "description": "Bearer token for authorization",
-                "schema": {
-                    "type": "string",
-                    "example": "Bearer "
-                }
+                "schema": {"type": "string", "example": "Bearer "},
             },
             {
                 "name": "user_info",
                 "in": "formData",
                 "type": "string",
                 "description": "使用者的訊息，包括 user_Id",
-                "required": True
+                "required": True,
             },
             {
                 "name": "input_text",
                 "in": "formData",
                 "type": "string",
                 "description": "使用者的聊天輸入文本",
-                "required": True
-            }
+                "required": True,
+            },
         ],
         "responses": {
             200: {
@@ -234,37 +211,33 @@ def train_model():
                     "application/json": {
                         "res": "這是模型生成的回應",
                     }
-                }
+                },
             },
             400: {
                 "description": "輸入錯誤",
-                "examples": {
-                    "application/json": {"error": "Input text is required"}
-                },
+                "examples": {"application/json": {"error": "Input text is required"}},
             },
             404: {
                 "description": "模型未找到",
                 "examples": {
                     "application/json": {"error": "Model directory not found"}
-                }
+                },
             },
             500: {
                 "description": "內部錯誤",
-                "examples": {
-                    "application/json": {"error": "Internal server error"}
-                }
-            }
+                "examples": {"application/json": {"error": "Internal server error"}},
+            },
         },
     }
 )
 def chat():
     current_email = get_jwt_identity()
-    
+
     # 從資料庫中查詢使用者
     user = User.get_user_by_email(current_email)
     if user is None:
         return jsonify(message="使用者不存在"), 404
-    
+
     user_info = request.form.get("user_info")
     if user_info:
         user_info = json.loads(user_info)
@@ -276,13 +249,15 @@ def chat():
     trained_model = TrainedModelRepo.find_trainedmodel_by_user_id(user_id=user_id)
 
     if trained_model is None:
-        return jsonify({"error":"Model not found"}),404
-    
-    model_dir = os.path.abspath(os.path.join("..", "saved_models", trained_model.modelname))
+        return jsonify({"error": "Model not found"}), 404
+
+    model_dir = os.path.abspath(
+        os.path.join("..", "saved_models", trained_model.modelname)
+    )
 
     if not os.path.exists(model_dir):
         return jsonify({"error": "Model directory not found"}), 404
-        
+
     input_text = request.form.get("input_text", "")
 
     if not input_text:
@@ -290,14 +265,22 @@ def chat():
 
     try:
         responses = inference(model_dir, input_text, user_id)
-        
+
         if responses is None:
             return jsonify({"error": "Inference failed"}), 500
-        
+
         response_data = {
-            "result": [{"input": input_text, "output": response} for response in responses],
-            "msg": f"成功取得{len(responses)}筆回答"
+            "result": [
+                {"input": input_text, "output": response} for response in responses
+            ],
+            "msg": f"成功取得{len(responses)}筆回答",
         }
-        return Response(json.dumps(response_data, ensure_ascii=False), content_type="application/json; charset=utf-8"), 200
+        return (
+            Response(
+                json.dumps(response_data, ensure_ascii=False),
+                content_type="application/json; charset=utf-8",
+            ),
+            200,
+        )
     except Exception as e:
         return jsonify({"error": str(e)}), 500
