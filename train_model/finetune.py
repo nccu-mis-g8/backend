@@ -1,13 +1,13 @@
 from transformers import (
+    Trainer,
+    TrainingArguments,
     AutoModelForCausalLM,
     AutoTokenizer,
     BitsAndBytesConfig,
 )
-from trl import SFTConfig, SFTTrainer
 from peft import (
     LoraConfig,
     get_peft_model,
-    get_peft_model_state_dict,
     prepare_model_for_kbit_training,
 )
 import datasets
@@ -47,7 +47,6 @@ def generate_prompt(data_point):
         f'### 回覆：\n{data_point["output"]}'
     )
 
-
 def train(id: str, model_dir: str, save_dir: str, data_path: str):
     device_map = "auto" if torch.cuda.is_available() else "cpu"
     nf4_config = BitsAndBytesConfig(
@@ -59,8 +58,6 @@ def train(id: str, model_dir: str, save_dir: str, data_path: str):
     tokenizer = AutoTokenizer.from_pretrained(
         BASE_MODEL_DIR,
         add_eos_token=True,
-        # 不要傳quantization_config，否則會報錯
-        # quantization_config=nf4_config
     )
     tokenizer.pad_token = tokenizer.eos_token
 
@@ -82,59 +79,39 @@ def train(id: str, model_dir: str, save_dir: str, data_path: str):
         task_type="CAUSAL_LM",
     )
 
-    training_arg = SFTConfig(
+    model = get_peft_model(model, peft_args)
+
+    training_args = TrainingArguments(
         output_dir=f"./ouput/{id}",
         num_train_epochs=3,
         per_device_train_batch_size=4,
         gradient_accumulation_steps=2,
-        # optim="paged_adamw_32bit",
         learning_rate=3e-4,
-        # fp16=False,
         fp16=True,
-        # bf16=False,
         max_steps=-1,
         warmup_ratio=0.03,
-        weight_decay=0.0,  # 權重衰減
+        weight_decay=0.0,
         max_grad_norm=0.3,
         save_steps=25,
         logging_steps=25,
     )
 
-    #
-    def formatting_prompts_func(example):
-        output_texts = []
-        for i in range(len(example["instruction"])):
-            text = (
-                "以下是一個描述任務的指令，以及一個與任務資訊相關的輸入。請撰寫一個能適當完成此任務指令的回覆\n\n"
-                f'### 指令：\n{example["instruction"][i]}\n\n### 輸入：\n{example["input"][i]}\n\n'
-                f'### 回覆：\n{example["output"][i]}'
-            )
-            output_texts.append(text)
-        return output_texts
-
-    #
     def generate_and_tokenize_prompt(data_point):
         full_prompt = generate_prompt(data_point)
         tokenized_full_prompt = tokenize(tokenizer, full_prompt)
         return tokenized_full_prompt
 
-    # dataset = datasets.Dataset.from_pandas(pd.read_csv(config.data_path).head(100))
-    # NOTE: 暫時把file寫死
-    dataset = datasets.Dataset.from_pandas(
-        # pd.read_csv("C:/Users/User/Desktop/train_data.csv").head(100)
-        pd.read_csv(data_path).head(100)
-    )
+    dataset = datasets.Dataset.from_pandas(pd.read_csv(data_path))
     train_data = dataset.map(generate_and_tokenize_prompt)
     print("start training")
-    trainer = SFTTrainer(
+    
+    trainer = Trainer(
         model=model,
         train_dataset=train_data,
-        peft_config=peft_args,
-        max_seq_length=None,
         tokenizer=tokenizer,
-        args=training_arg,
-        formatting_func=formatting_prompts_func,
+        args=training_args,
     )
+
     print("Starting training...")
     trainer.train()
     print("Saving model and tokenizer...")
