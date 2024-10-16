@@ -268,3 +268,66 @@ def get_photo(user_id):
 
     # 傳回使用者的圖片檔案
     return send_file(file_path, mimetype=mimetypes.guess_type(file_path)[0])
+
+@userinfo_bp.get("/images/<imagepath>")
+@swag_from(
+    {
+        "tags": ["UserInfo"],
+        "description": """
+        此API 拿取照片。
+
+        Input:
+        - imagepath: 欲獲取的照片路徑
+        
+        """,
+        "parameters": [
+            {
+                "name": "user_info",
+                "in": "path",
+                "type": "string",
+                "required": True,
+                "description": "User information in JSON format",
+            },
+        ],
+        "responses": {
+            "200": {
+                "description": "成功回傳使用者頭像",
+                "content": {
+                    "image/jpeg": {},
+                    "image/png": {},
+                    "image/jpg": {}
+                }
+            },
+            "400": {
+                "description": "Bad request due to missing file or wrong file type",
+                "examples": {
+                    "application/json": {"error": "Bad request - invalid path"}
+                },
+            },
+            "404": {
+                "description": "Image not found",
+                "examples": {"application/json": {"error": "Image not found"}},
+            },
+            "500": {
+                "description": "Internal Error",
+                "examples": {"application/json": {"error": "Internal Server Error"}},
+            },
+        },
+    }
+)
+def get_image(imagepath):
+    # current_email = get_jwt_identity()
+
+    file_path = os.path.join(FILE_DIRECTORY, imagepath)
+    
+    if not os.path.exists(file_path):
+        # 如果檔案不存在，也回傳預設圖片
+        default_image_path = os.path.join(FILE_DIRECTORY, "default_avatar.png")
+        if os.path.exists(default_image_path):
+            return send_file(default_image_path, mimetype="image/png")
+        else:
+            return jsonify({"error": "User or photo not found"}), 404
+
+    # 傳回使用者的圖片檔案
+    return send_file(file_path, mimetype=mimetypes.guess_type(file_path)[0])
+    
