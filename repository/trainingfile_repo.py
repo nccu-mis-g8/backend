@@ -39,6 +39,10 @@ class TrainingFileRepo:
     @staticmethod
     def find_first_training_file_by_user_id(user_id) -> Optional[TrainingFile]:
         return TrainingFile.query.filter_by(user_id=user_id).first()
+    
+    @staticmethod
+    def find_first_training_file_by_user_and_model_id(user_id, model_id) -> Optional[TrainingFile]:
+        return TrainingFile.query.filter_by(user_id=user_id, model_id=model_id).first()
 
     @staticmethod
     def delete_training_file_by_file_id(file_id):
