@@ -7,6 +7,7 @@ class TrainingFile(db.Model):
     __tablename__ = "training_file"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    model_id = db.Column(db.Integer, db.ForeignKey("trained_model.id"))
     filename = db.Column(db.String(50), nullable=False)
     # original_file_name是user上傳時，本機的file name
     original_file_name = db.Column(db.String(255), nullable=False)
