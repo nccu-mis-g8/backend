@@ -9,6 +9,8 @@ class TrainedModel(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     modelname: str = db.Column(db.String(50), nullable=False)
+    modelphoto: str = db.Column(db.String(255), nullable=True)
+    anticipation =  db.Column(db.Text, nullable=True)
     start_time: DateTime = db.Column(DateTime(timezone=True), default=func.now())
     end_time: Optional[DateTime] = db.Column(DateTime(timezone=True), nullable=True)
 
