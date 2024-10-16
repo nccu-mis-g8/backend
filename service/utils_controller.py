@@ -5,6 +5,7 @@ from flask import (
 )
 from flasgger import swag_from
 from flask_jwt_extended import get_jwt_identity, jwt_required
+from repository.trainedmodel_repo import TrainedModelRepo
 from repository.trainingfile_repo import TrainingFileRepo
 from models.user import User
 import json
