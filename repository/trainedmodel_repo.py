@@ -8,6 +8,10 @@ from extensions import db
 
 class TrainedModelRepo:
     @staticmethod
+    def is_model_id_exists(model_id):
+        return TrainedModel.query.filter_by(id=model_id).scalar() is not None
+    
+    @staticmethod
     def create_trainedmodel(user_id) -> TrainedModel:
         model = TrainedModel(user_id=user_id, end_time=None)
         db.session.add(model)
