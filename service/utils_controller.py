@@ -464,6 +464,11 @@ def upload_txt_file():
             jsonify({"error": "File type not allowed. Only TXT files are allowed."}),
             400,
         )
+
+
+
+@utils_bp.get("/user/model_status/<int:model_Id>")
+@jwt_required()
 @swag_from({
     "tags": ["Utils"],
     'description': '取得指定使用者和模型的訓練狀態和相關信息。',
@@ -517,3 +522,52 @@ def upload_txt_file():
             'description': '伺服器錯誤，無法取得模型狀態'
         }
     }
+})
+def get_model_status(model_Id):
+    current_email = get_jwt_identity()
+
+    # 從資料庫中查詢使用者
+    user = User.get_user_by_email(current_email)
+    if user is None:
+        return jsonify(message="使用者不存在"), 404
+    
+    model_exists = TrainedModelRepo.is_model_id_exists(model_Id)
+    if not model_exists:
+        return jsonify({"error": "Model ID not found in database"}), 404
+
+    try:
+        # 查詢使用者的第一個已訓練模型
+        trained_model_status = TrainedModelRepo.find_trainedmodel_by_user_id(user.id)
+        if not trained_model_status:
+            return jsonify({"message": "No trained model found for this user."}), 404
+
+        # 查詢相關的訓練檔案
+        training_file_status = TrainingFileRepo.find_first_training_file_by_user_and_model_id(user.id, model_Id)
+        if not training_file_status:
+            return jsonify({"message": "No training files found for this user."}), 404
+
+    except Exception as e:
+        logging.error(f"Error retrieving training files or trained model for user {user}: {e}")
+        return (
+            jsonify({"message": "An error occurred while fetching training files or trained model."}),
+            500,
+        )
+
+    return (
+        jsonify(
+            {
+                "user_id": training_file_status.user_id,
+                "training_file_id": training_file_status.id,
+                "filename": training_file_status.filename,
+                "original_file_name": training_file_status.original_file_name,
+                "start_train": training_file_status.start_train,
+                "is_trained": training_file_status.is_trained,
+                "file_upload_time": training_file_status.upload_time.strftime("%Y-%m-%d %H:%M:%S"),
+                "model_id": trained_model_status.id,
+                "model_name": trained_model_status.modelname,
+                "model_photo": trained_model_status.modelphoto,
+                "model_anticipation": trained_model_status.anticipation,
+            }
+        ),
+        200,
+    )
