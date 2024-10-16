@@ -464,3 +464,56 @@ def upload_txt_file():
             jsonify({"error": "File type not allowed. Only TXT files are allowed."}),
             400,
         )
+@swag_from({
+    "tags": ["Utils"],
+    'description': '取得指定使用者和模型的訓練狀態和相關信息。',
+    'parameters': [
+        {
+            'name': 'Authorization',
+            'in': 'header',
+            'required': True,
+            'description': 'JWT Token to authorize the request',
+            "schema": {"type": "string", "example": "Bearer "},
+        },
+        {
+            'name': 'model_Id',
+            'in': 'path',
+            'required': True,
+            'description': '欲查詢的模型ID',
+            "schema": {"type": "integer", 'example': 1},
+        }
+    ],
+    'responses': {
+        200: {
+            'description': '訓練模型狀態資料',
+            'content': {
+                'application/json': {
+                    'schema': {
+                        'type': 'object',
+                        'properties': {
+                            'user_id': {'type': 'integer', 'description': '使用者ID'},
+                            'training_file_id': {'type': 'integer', 'description': '訓練文件ID'},
+                            'filename': {'type': 'string', 'description': '保存的文件名稱'},
+                            'original_file_name': {'type': 'string', 'description': '原始上傳文件名'},
+                            'start_train': {'type': 'boolean', 'description': '是否開始訓練'},
+                            'is_trained': {'type': 'boolean', 'description': '是否訓練完成'},
+                            'file_upload_time': {'type': 'string', 'format': 'date-time', 'description': '文件上傳時間'},
+                            'model_id': {'type': 'integer', 'description': '模型ID'},
+                            'model_name': {'type': 'string', 'description': '模型名稱'},
+                            'model_photo': {'type': 'string', 'description': '模型照片路徑'},
+                            'model_anticipation': {'type': 'string', 'description': '模型描述'}
+                        }
+                    }
+                }
+            }
+        },
+        400: {
+            'description': '模型ID為必填項或格式錯誤'
+        },
+        404: {
+            'description': '使用者或模型不存在'
+        },
+        500: {
+            'description': '伺服器錯誤，無法取得模型狀態'
+        }
+    }
