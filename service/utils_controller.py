@@ -417,7 +417,7 @@ def get_model_status(model_Id):
 
     try:
         # 查詢使用者的第一個已訓練模型
-        trained_model_status = TrainedModelRepo.find_trainedmodel_by_user_id(user.id)
+        trained_model_status = TrainedModelRepo.find_trainedmodel_by_user_and_model_id(user.id, model_Id)
         if not trained_model_status:
             return jsonify({"message": "No trained model found for this user."}), 404
         
