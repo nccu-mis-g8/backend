@@ -306,17 +306,16 @@ def upload_txt_file():
 
         # 處理 line chat 的文件
         processor = linetxt_to_llama.LineChatProcessor(
-            output_name=user_id, master_name=master_name, data_dir=FILE_DIRECTORY
+            output_name=user.id, master_name=master_name, data_dir=FILE_DIRECTORY
         )
         try:
-            csv_file_name = processor.process(file)  # 假設 process 方法需要文件來處理
-            print(csv_file_name)
+            csv_file_name = processor.process(file)  # process 方法需要文件來處理
         except Exception as e:
             return jsonify({"error": f"File processing error: {str(e)}"}), 500
 
         # 確認是否已有未完成的訓練文件，並刪除
-        current_file = TrainingFileRepo.find_first_training_file_by_user_id(
-            user_id=user_id
+        current_file = TrainingFileRepo.find_first_training_file_by_user_and_model_id(
+            user_id=user.id, model_id=model_id
         )
         if current_file is not None and not current_file.is_trained:
             try:
