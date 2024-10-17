@@ -45,6 +45,10 @@ class TrainedModelRepo:
     @staticmethod
     def find_trainedmodel_by_user_id(user_id: int) -> TrainedModel | None:
         return TrainedModel.query.filter_by(user_id=user_id).first()
+    
+    @staticmethod
+    def find_trainedmodel_by_user_and_model_id(user_id, model_id) -> TrainedModel | None:
+        return TrainedModel.query.filter_by(user_id=user_id, id=model_id).first()
 
     @staticmethod
     def find_all_trainedmodel_by_user_id(user_id: int) -> List[TrainedModel]:
