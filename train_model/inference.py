@@ -11,27 +11,25 @@ from requests.exceptions import RequestException
 from concurrent.futures import TimeoutError
 from repository.trainingfile_repo import TrainingFileRepo
 from typing import List
-
+import re
 
 def inference(model_dir: str, input_text: str, user_id: str) -> List[str] | None:
-    print("== model dir:" + model_dir)
     try:
-        device_map = "auto" if torch.cuda.is_available() else "cpu"
-        model = AutoModelForCausalLM.from_pretrained(
-            model_dir,
-            device_map=device_map,
-        )
-        print("checkpoint 0")
-        model = PeftModel.from_pretrained(model, model_dir)
-        print("checkpoint 1")
+        model = AutoModelForCausalLM.from_pretrained(model_dir)
+        if not hasattr(model, "peft_config"):
+            model = PeftModel.from_pretrained(model, model_dir)
         tokenizer = AutoTokenizer.from_pretrained(model_dir)
 
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        model.to(device)
+
+        chat = []
+
+        # 從資料庫中找到用戶的歷史資料
         user_history = TrainingFileRepo.find_trainingfile_by_user_id(user_id=user_id)
 
-        chat = [{"role": "system", "content": "你是我的朋友，請你以和過去回答相同的語氣與我聊天，注意回答的內容要符合問題。"}]
-
         if isinstance(user_history, list) and user_history:
-            training_file = random.choice(user_history)
+            training_file = random.choice(user_history) 
         else:
             training_file = user_history
 
@@ -55,18 +53,14 @@ def inference(model_dir: str, input_text: str, user_id: str) -> List[str] | None
 
         chat.append({"role": "user", "content": f"{input_text}"})
 
-        prompt = tokenizer.apply_chat_template(
-            chat, tokenize=False, add_generation_prompt=True
-        )
-        inputs = tokenizer(
-            prompt, return_tensors="pt", padding=True, truncation=True, max_length=256
-        )
+        # 直接構建對話，而不使用 apply_chat_template
+        prompt = " ".join([message["content"] for message in chat])
+
+        inputs = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True, max_length=256).to(device)
         input_ids = inputs["input_ids"].to(device)
         attention_mask = inputs["attention_mask"].to(device)
 
-        generate_two_responses = random.random() < 0.5
-        num_return_sequences = 2 if generate_two_responses else 1
-
+        # 生成回應
         outputs = model.generate(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -75,14 +69,19 @@ def inference(model_dir: str, input_text: str, user_id: str) -> List[str] | None
             top_k=30,
             top_p=0.85,
             temperature=0.6,
-            num_return_sequences=num_return_sequences,
+            num_return_sequences=1  # 確保生成一個簡單回應
         )
 
-        generated_texts = [
-            tokenizer.decode(output, skip_special_tokens=True) for output in outputs
-        ]
+        generated_texts = [tokenizer.decode(output, skip_special_tokens=True).strip() for output in outputs]
 
-        return generated_texts
+        # 使用正則表達式過濾掉多餘的模板部分
+        cleaned_texts = []
+        for text in generated_texts:
+            # 移除「### 指令」及相關模板信息
+            cleaned_text = re.sub(r"### 指令.*### 回覆：", "", text)
+            cleaned_texts.append(cleaned_text.strip())
+
+        return cleaned_texts
     except Exception as e:
-        print(f"Error in inference:{e}")
+        print(f"Error in inference: {e}")
         return None
