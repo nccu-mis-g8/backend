@@ -447,7 +447,7 @@ def create_model():
                             
             # 儲存檔案
             saved_model = TrainedModelRepo.create_trainedmodel(
-                user_id=user_id, modelphoto=model_photo, anticipation=anticipation
+                user_id=user_id, modelname=model_name, modelphoto=model_photo, anticipation=anticipation
             )
             if not saved_model:
                 return (
