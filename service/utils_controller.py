@@ -285,8 +285,8 @@ def upload_txt_file():
     model_id = user_info.get("model_Id")    
     master_name = user_info.get("master_name")
 
-    if not user_id or not master_name:
-        return jsonify({"error": "user_Id or master_name is missing"}), 400
+    if not master_name or not model_id:
+        return jsonify({"error": "master_name or model_id is missing"}), 400
 
     # 確認 request 中是否有檔案
     if "file" not in request.files:
