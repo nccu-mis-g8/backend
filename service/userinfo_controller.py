@@ -7,6 +7,7 @@ import json
 
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
+from repository.trainedmodel_repo import TrainedModelRepo
 from repository.userphoto_repo import UserPhotoRepo
 from models.user import User
 
@@ -269,7 +270,7 @@ def get_photo(user_id):
     # 傳回使用者的圖片檔案
     return send_file(file_path, mimetype=mimetypes.guess_type(file_path)[0])
 
-@userinfo_bp.get("/images/<imagepath>")
+@userinfo_bp.get("/images/<id>/<photoname>")
 @swag_from(
     {
         "tags": ["UserInfo"],
@@ -277,7 +278,7 @@ def get_photo(user_id):
         此API 拿取照片。
 
         Input:
-        - imagepath: 欲獲取的照片路徑
+        - photopath: 欲獲取的照片路徑
         
         """,
         "parameters": [
@@ -315,11 +316,11 @@ def get_photo(user_id):
         },
     }
 )
-def get_image(imagepath):
+def get_image(id, photoname):
     # current_email = get_jwt_identity()
 
-    file_path = os.path.join(FILE_DIRECTORY, imagepath)
-    
+    file_path = os.path.join(FILE_DIRECTORY, id,photoname)
+    print(file_path)
     if not os.path.exists(file_path):
         # 如果檔案不存在，也回傳預設圖片
         default_image_path = os.path.join(FILE_DIRECTORY, "default_avatar.png")
@@ -330,4 +331,135 @@ def get_image(imagepath):
 
     # 傳回使用者的圖片檔案
     return send_file(file_path, mimetype=mimetypes.guess_type(file_path)[0])
+
+@userinfo_bp.post("/user/create_model")
+@jwt_required()
+@swag_from({
+    "tags": ["UserInfo"],
+    "description": """
+    此API 用於上傳使用者頭貼，支援格式為 JPG, JPEG, PNG。
+
+    Input:
+    - `Authorization` header 必須包含 Bearer token 以進行身份驗證。
+    - user_info: 包含使用者的基本訊息 (例如 user_Id)。
+    - file: 要上傳的圖像檔案 (JPG, JPEG, PNG)。
+    """,
+    "consumes": ["multipart/form-data"],
+    "parameters": [
+        {
+            "name": "Authorization",
+            "in": "header",
+            "required": True,
+            "description": "Bearer token for authorization",
+            "schema": {
+                "type": "string",
+                "example": "Bearer "
+            }
+        },
+        {
+            "name": "model_name",
+            "in": "formData",
+            "required": True,
+            "type": "string",
+            "description": "model_name",
+            "example": "model_name"
+        },
+        {
+            "name": "anticipation",
+            "in": "formData",
+            "required": True,
+            "type": "string",
+            "description": "anticipation",
+            "example": "anticipation"
+        },
+        {
+            "name": "file",
+            "in": "formData",
+            "type": "file",
+            "required": True,
+            "description": "The image file to upload (JPG, JPEG, PNG)",
+        },
+    ],
+    "responses": {
+        200: {
+            "description": "model created successfully",
+            "examples": {
+                "application/json": {"message": "model created successfully"}
+            },
+        },
+        400: {
+            "description": "Bad request due to missing file, wrong file type, or invalid user information",
+            "examples": {
+                "application/json": {
+                    "error": "No file part in the request",
+                    "error": "File type not allowed. Only png, jpg, jpeg files are allowed.",
+                    "error": "Invalid user_info format"
+                }
+            },
+        },
+        403: {
+            "description": "Forbidden request due to missing or invalid user information",
+            "examples": {"application/json": {"error": "Forbidden"}},
+        },
+        404: {
+            "description": "User ID not found",
+            "examples": {"application/json": {"error": "User ID not found"}},
+        },
+        500: {
+            "description": "Internal server error occurred while processing the request",
+            "examples": {"application/json": {"error": "Internal Server Error"}},
+        },
+    },
+})
+def crete_model():
+    current_email = get_jwt_identity()
+    user_id = User.get_user_by_email(current_email).id
+
+    model_name = request.form.get("model_name")
+    if model_name is None or model_name == "":
+        return jsonify({"error": "model_name is required"}), 400
     
+    anticipation = request.form.get("anticipation")
+    if anticipation == "":
+        anticipation = None
+
+    # 檢查是否有檔案
+    if "file" not in request.files:
+        model_photo = None
+
+    else:
+        file = request.files["file"]
+        # 檢查檔案名稱是否存在
+        if file.filename == "":
+            return jsonify({"error": "No file provided"}), 400
+        model_photo = file.filename
+        # 確認檔案類型是否為 jpg, jpeg, png
+        if file and allowed_file(file.filename, ["jpg", "jpeg", "png"]):
+            
+            # 檢查並創建檔案目錄
+            if not os.path.exists(FILE_DIRECTORY):
+                os.makedirs(FILE_DIRECTORY)
+            
+            user_folder = os.path.join(FILE_DIRECTORY, str(user_id))
+                            
+            # 儲存檔案
+            saved_model = TrainedModelRepo.create_trainedmodel(
+                user_id=user_id, modelphoto=model_photo, anticipation=anticipation
+            )
+            if not saved_model:
+                return (
+                    jsonify({"error": "Unable to create file."}),
+                    500,
+                )
+            
+            if not os.path.exists(user_folder):
+                os.makedirs(user_folder)
+
+            file.save(os.path.join(user_folder, saved_model.modelphoto))
+            return jsonify({"message": "model created successfully"}), 200
+        else:
+            return (
+                jsonify({"error": "File type not allowed. Only png, jpg, jpeg files are allowed."}),
+                400,
+            )
+
