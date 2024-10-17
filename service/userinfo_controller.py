@@ -411,9 +411,12 @@ def get_image(id, photoname):
         },
     },
 })
-def crete_model():
+def create_model():
     current_email = get_jwt_identity()
     user_id = User.get_user_by_email(current_email).id
+    
+    if user_id is None:
+        return jsonify({"error": "User ID not found"}), 404
 
     model_name = request.form.get("model_name")
     if model_name is None or model_name == "":
