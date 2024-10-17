@@ -36,12 +36,14 @@ def hello_world():
     {
         "tags": ["Utils"],
         "description": """
-        此API 用於上傳 CSV 檔案。
+        此API 用於上傳或更新 CSV 檔案。
 
         Input:
         - `Authorization` header 必須包含 Bearer token 以進行身份驗證。
-        - user_info: 使用者的資訊，必須是 JSON 格式。
+        - user_info: 使用者的資訊，必須是 JSON 格式，其中包含 `model_Id`。
         - file: 要上傳的 CSV 檔案。
+
+        如果同一用戶和模型的檔案已存在且尚未完成訓練，將會覆蓋原有檔案。
         """,
         "parameters": [
             {
@@ -54,9 +56,9 @@ def hello_world():
             {
                 "name": "user_info",
                 "in": "formData",
-                "type": "string",
                 "required": True,
-                "description": "User information in JSON format",
+                "description": "User information in JSON format, must include `model_Id`",
+                "schema": {"type": "string", "example": '{"model_Id": "1"}'},
             },
             {
                 "name": "file",
@@ -68,24 +70,33 @@ def hello_world():
         ],
         "responses": {
             "200": {
-                "description": "File uploaded successfully",
+                "description": "File uploaded successfully or updated if a previous file existed and was not trained",
                 "examples": {
                     "application/json": {"message": "File uploaded successfully"}
                 },
             },
             "400": {
-                "description": "Bad request due to missing file or wrong file type",
+                "description": "Bad request due to missing file, missing `model_Id`, or wrong file type",
                 "examples": {
-                    "application/json": {"error": "No file part in the request"}
+                    "application/json": {
+                        "error": "No file part in the request",
+                        "error": "No file provided",
+                        "error": "model_Id is missing",
+                        "error": "File type not allowed. Only CSV files are allowed."
+                    }
                 },
             },
             "403": {
-                "description": "Forbidden request",
+                "description": "Forbidden request due to missing user info",
                 "examples": {"application/json": {"error": "Forbidden"}},
             },
+            "404": {
+                "description": "User not found",
+                "examples": {"application/json": {"message": "使用者不存在"}},
+            },
             "500": {
-                "description": "Internal Error",
-                "examples": {"application/json": {"error": "Internal Server Error"}},
+                "description": "Internal Error due to failure in saving the file",
+                "examples": {"application/json": {"error": "Unable to create file."}},
             },
         },
     }
