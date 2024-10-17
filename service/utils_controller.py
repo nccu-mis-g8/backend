@@ -115,13 +115,13 @@ def upload_csv_file():
     else:
         return jsonify({"error": "Forbidden"}), 403
 
-    # 獲取 userId
-    user_id = user_info.get("user_Id")
-
-    # 確認使用者是否存在
-    user_exists = User.is_user_id_exists(user_id)
-    if not user_exists:
-        return jsonify({"error": "User ID not found"}), 404
+    # 獲取 model_Id
+    model_id = user_info.get("model_Id")
+    
+    # 確認 model_Id 是否存在
+    model_exists = TrainedModelRepo.is_model_id_exists(model_id)
+    if not model_exists:
+        return jsonify({"error": "Model ID not found in database"}), 404
 
     # 確認 request 中是否有檔案
     if "file" not in request.files:
@@ -282,8 +282,7 @@ def upload_txt_file():
     else:
         return jsonify({"error": "Forbidden"}), 403
 
-    # 獲取 userId 和 master_name
-    user_id = user_info.get("user_Id")
+    model_id = user_info.get("model_Id")    
     master_name = user_info.get("master_name")
 
     if not user_id or not master_name:
