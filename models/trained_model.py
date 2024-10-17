@@ -11,12 +11,12 @@ class TrainedModel(db.Model):
     modelname: str = db.Column(db.String(50), nullable=False)
     modelphoto: str = db.Column(db.String(255), nullable=True)
     anticipation =  db.Column(db.Text, nullable=True)
-    start_time: DateTime = db.Column(DateTime(timezone=True), default=func.now())
+    start_time: DateTime = db.Column(DateTime(timezone=True), nullable=True)
     end_time: Optional[DateTime] = db.Column(DateTime(timezone=True), nullable=True)
 
-    def __init__(self, user_id, modelphoto, anticipation,end_time=None):
+    def __init__(self, user_id, modelname, modelphoto, anticipation, end_time=None):
         self.user_id = user_id
-        self.modelname = str(uuid.uuid4())
+        self.modelname = modelname
         self.modelphoto = modelphoto
         self.anticipation = anticipation
         self.end_time = end_time
