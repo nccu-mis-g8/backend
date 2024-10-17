@@ -140,8 +140,8 @@ def upload_csv_file():
         if not os.path.exists(FILE_DIRECTORY):
             os.makedirs(FILE_DIRECTORY)
 
-        current_file = TrainingFileRepo.find_first_training_file_by_user_id(
-            user_id=user_id
+        current_file = TrainingFileRepo.find_first_training_file_by_user_and_model_id(
+            user_id=user.id, model_id=model_id
         )
 
         is_renew = False  # 是否是覆蓋舊的
@@ -153,7 +153,7 @@ def upload_csv_file():
             is_renew = True
         # 儲存檔案
         saved_file = TrainingFileRepo.create_trainingfile(
-            user_id=user_id, original_file_name=file.filename
+            user_id=user.id, model_id=model_id, original_file_name=file.filename
         )
         if saved_file is None:
             return (
@@ -333,7 +333,7 @@ def upload_txt_file():
 
         # 儲存檔案
         saved_file = TrainingFileRepo.create_trainingfile(
-            user_id=user_id, original_file_name=file.filename, filename=csv_file_name
+            user_id=user.id, model_id=model_id,original_file_name=file.filename, filename=csv_file_name
         )
         if saved_file is None:
             return jsonify({"error": "Unable to create file."}), 500
