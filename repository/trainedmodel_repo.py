@@ -12,12 +12,12 @@ class TrainedModelRepo:
         return TrainedModel.query.filter_by(id=model_id).scalar() is not None
     
     @staticmethod
-    def create_trainedmodel(user_id, modelphoto, anticipation) -> TrainedModel:
+    def create_trainedmodel(user_id, modelname, modelphoto, anticipation) -> TrainedModel:
         if(modelphoto==""):
             modelphoto = None
         if(anticipation==""):
             anticipation = None
-        model = TrainedModel(user_id=user_id, modelphoto=modelphoto, anticipation=anticipation, end_time=None)
+        model = TrainedModel(user_id=user_id, modelname=modelname, modelphoto=modelphoto, anticipation=anticipation, end_time=None)
         db.session.add(model)
         TrainedModelRepo.save()
         return model
