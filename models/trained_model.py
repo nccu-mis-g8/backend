@@ -14,7 +14,9 @@ class TrainedModel(db.Model):
     start_time: DateTime = db.Column(DateTime(timezone=True), default=func.now())
     end_time: Optional[DateTime] = db.Column(DateTime(timezone=True), nullable=True)
 
-    def __init__(self, user_id, end_time=None):
+    def __init__(self, user_id, modelphoto, anticipation,end_time=None):
         self.user_id = user_id
         self.modelname = str(uuid.uuid4())
+        self.modelphoto = modelphoto
+        self.anticipation = anticipation
         self.end_time = end_time
