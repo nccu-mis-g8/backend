@@ -21,6 +21,13 @@ class TrainedModelRepo:
         db.session.add(model)
         TrainedModelRepo.save()
         return model
+    
+    @staticmethod
+    def start_trainedmodel(user_id, model_id) -> TrainedModel:
+        model = TrainedModel.query.filter_by(user_id=user_id, id=model_id).first()
+        model.start_time = db.func.now()
+        TrainedModelRepo.save()
+        return model
 
     @staticmethod
     def save() -> bool:
