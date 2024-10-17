@@ -18,8 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 FILE_DIRECTORY = "..\\training_file"
-#IP+port
-BASE_URL = "http://10.1.200.144:5000"
+
 
 def allowed_file(filename, extension):
     return "." in filename and filename.rsplit(".", 1)[1].lower() == extension
