@@ -195,7 +195,7 @@ def upload_csv_file():
                 "description": "JSON string containing user_Id and master_name",
                 "required": True,
                 "type": "string",
-                "example": '{"user_Id": "12345", "master_name": "John"}',
+                "schema": {"type": "string", "example": '{"model_Id": "1", "master_name": "John"}'},
             },
             {
                 "name": "file",
@@ -225,7 +225,7 @@ def upload_csv_file():
                     "properties": {
                         "error": {
                             "type": "string",
-                            "example": "user_Id or master_name is missing",
+                            "example": "model_Id or master_name is missing",
                         }
                     },
                 },
