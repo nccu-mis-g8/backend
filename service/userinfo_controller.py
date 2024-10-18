@@ -89,23 +89,7 @@ def upload_photo():
     if user is None:
         return jsonify(message="使用者不存在"), 404
     
-    user_info = request.form.get("user_info")
-    
-    # 檢查是否有 user_info
-    if user_info:
-        try:
-            user_info = json.loads(user_info)
-        except ValueError:
-            return jsonify({"error": "Invalid user_info format"}), 400
-    else:
-        return jsonify({"error": "Forbidden"}), 403
-
-    user_id = user_info.get("user_Id")
-    print(user_id)
-    if not user_id:
-        return jsonify({"error": "Invalid user ID"}), 400
-    
-    user_exists = User.is_user_id_exists(user_id)
+    user_exists = User.is_user_id_exists(user.id)
     if not user_exists:
         return jsonify({"error": "User ID not found"}), 404
 
@@ -127,19 +111,19 @@ def upload_photo():
             os.makedirs(FILE_DIRECTORY)
 
         current_file = UserPhotoRepo.find_user_photo_by_user_id(
-            user_id=user_id
+            user_id=user.id
         )
         
-        user_folder = os.path.join(FILE_DIRECTORY, str(user_id))
+        user_folder = os.path.join(FILE_DIRECTORY, str(user.id))
         
         # 上傳新的覆蓋舊的，把舊的file實體刪除
         if current_file:
             os.remove(os.path.join(user_folder, current_file.photoname))
-            UserPhotoRepo.delete_user_photo_by_user_id(user_id)
+            UserPhotoRepo.delete_user_photo_by_user_id(user.id)
             
         # 儲存檔案
         saved_file = UserPhotoRepo.create_user_photo(
-            user_id=user_id, photoname=file.filename
+            user_id=user.id, photoname=file.filename
         )
         if not saved_file:
             return (
