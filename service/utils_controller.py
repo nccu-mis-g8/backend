@@ -18,7 +18,8 @@ logger = logging.getLogger(__name__)
 
 
 FILE_DIRECTORY = "..\\training_file"
-
+#IP+port
+BASE_URL = "http://10.232.73.192:5000"
 
 def allowed_file(filename, extension):
     return "." in filename and filename.rsplit(".", 1)[1].lower() == extension
@@ -416,10 +417,15 @@ def get_model_status(model_Id):
 
     try:
         # 查詢使用者的第一個已訓練模型
-        trained_model_status = TrainedModelRepo.find_trainedmodel_by_user_id(user.id)
+        trained_model_status = TrainedModelRepo.find_trainedmodel_by_user_and_model_id(user.id, model_Id)
         if not trained_model_status:
             return jsonify({"message": "No trained model found for this user."}), 404
-
+        
+        #查看是否有照片
+        if trained_model_status.modelphoto is None:
+            photo_path ='avatar.png'
+        else:
+            photo_path = trained_model_status.modelphoto
         # 查詢相關的訓練檔案
         training_file_status = TrainingFileRepo.find_first_training_file_by_user_and_model_id(user.id, model_Id)
         if not training_file_status:
@@ -444,7 +450,7 @@ def get_model_status(model_Id):
                 "file_upload_time": training_file_status.upload_time.strftime("%Y-%m-%d %H:%M:%S"),
                 "model_id": trained_model_status.id,
                 "model_name": trained_model_status.modelname,
-                "model_photo": trained_model_status.modelphoto,
+                "model_photo": f'{BASE_URL}/userinfo/images/{photo_path}',
                 "model_anticipation": trained_model_status.anticipation,
             }
         ),
