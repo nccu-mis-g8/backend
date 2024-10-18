@@ -24,11 +24,10 @@ def allowed_file(filename, extensions):
 @swag_from({
     "tags": ["UserInfo"],
     "description": """
-    此API 用於上傳使用者頭貼，支援格式為 JPG, JPEG, PNG。
+    此 API 用於上傳使用者頭貼，支援格式為 JPG, JPEG, PNG。
 
     Input:
     - `Authorization` header 必須包含 Bearer token 以進行身份驗證。
-    - user_info: 包含使用者的基本訊息 (例如 user_Id)。
     - file: 要上傳的圖像檔案 (JPG, JPEG, PNG)。
     """,
     "consumes": ["multipart/form-data"],
@@ -42,13 +41,6 @@ def allowed_file(filename, extensions):
                 "type": "string",
                 "example": "Bearer "
             }
-        },
-        {
-            "name": "user_info",
-            "in": "formData",
-            "type": "string",
-            "required": True,
-            "description": "User information in JSON format, containing the user ID",
         },
         {
             "name": "file",
@@ -70,8 +62,8 @@ def allowed_file(filename, extensions):
             "examples": {
                 "application/json": {
                     "error": "No file part in the request",
-                    "error": "File type not allowed. Only png, jpg, jpeg files are allowed.",
-                    "error": "Invalid user_info format"
+                    "error": "No file provided",
+                    "error": "File type not allowed. Only png, jpg, jpeg files are allowed."
                 }
             },
         },
@@ -80,12 +72,12 @@ def allowed_file(filename, extensions):
             "examples": {"application/json": {"error": "Forbidden"}},
         },
         404: {
-            "description": "User ID not found",
+            "description": "User not found",
             "examples": {"application/json": {"error": "User ID not found"}},
         },
         500: {
             "description": "Internal server error occurred while processing the request",
-            "examples": {"application/json": {"error": "Internal Server Error"}},
+            "examples": {"application/json": {"error": "Unable to create file.", "error": "Internal Server Error"}},
         },
     },
 })
