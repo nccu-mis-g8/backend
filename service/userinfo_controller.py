@@ -249,19 +249,20 @@ def get_photo(user_id):
 
     # 如果使用者頭像是 null，則回傳預設圖片
     if not user_info:
-        default_image_path = os.path.join(FILE_DIRECTORY, "default_avatar.png")
+        default_image_path = os.path.join(FILE_DIRECTORY, 'default', "avatar.png")
         if os.path.exists(default_image_path):
             return send_file(default_image_path, mimetype="image/png")
         else:
             return jsonify({"error": "User or photo not found"}), 404
 
+    
     user_folder = os.path.join(FILE_DIRECTORY, str(user_id))
     file_path = os.path.join(user_folder, user_info.photoname)
 
     # 檢查照片檔案是否存在
     if not os.path.exists(file_path):
         # 如果檔案不存在，也回傳預設圖片
-        default_image_path = os.path.join(FILE_DIRECTORY, "default_avatar.png")
+        default_image_path = os.path.join(FILE_DIRECTORY, 'default', "avatar.png")
         if os.path.exists(default_image_path):
             return send_file(default_image_path, mimetype="image/png")
         else:
@@ -270,7 +271,8 @@ def get_photo(user_id):
     # 傳回使用者的圖片檔案
     return send_file(file_path, mimetype=mimetypes.guess_type(file_path)[0])
 
-@userinfo_bp.get("/images/<id>/<photoname>")
+@userinfo_bp.get("/images/<photoname>")
+@jwt_required()
 @swag_from(
     {
         "tags": ["UserInfo"],
@@ -283,12 +285,22 @@ def get_photo(user_id):
         """,
         "parameters": [
             {
-                "name": "user_info",
+            "name": "Authorization",
+            "in": "header",
+            "required": True,
+            "description": "Bearer token for authorization",
+            "schema": {
+                "type": "string",
+                "example": "Bearer "
+            }
+            },
+            {
+                "name": "photoname",
                 "in": "path",
                 "type": "string",
                 "required": True,
                 "description": "User information in JSON format",
-            },
+            }
         ],
         "responses": {
             "200": {
@@ -316,14 +328,18 @@ def get_photo(user_id):
         },
     }
 )
-def get_image(id, photoname):
-    # current_email = get_jwt_identity()
+def get_image(photoname):
+    current_email = get_jwt_identity()
+    id = User.get_user_by_email(current_email).id
 
-    file_path = os.path.join(FILE_DIRECTORY, id,photoname)
+    if(photoname == 'avatar.png'):
+        file_path = os.path.join(FILE_DIRECTORY, 'default',photoname)
+    else:
+        file_path = os.path.join(FILE_DIRECTORY, str(id),photoname)
     print(file_path)
     if not os.path.exists(file_path):
         # 如果檔案不存在，也回傳預設圖片
-        default_image_path = os.path.join(FILE_DIRECTORY, "default_avatar.png")
+        default_image_path = os.path.join(FILE_DIRECTORY, 'default',"avatar.png")
         if os.path.exists(default_image_path):
             return send_file(default_image_path, mimetype="image/png")
         else:

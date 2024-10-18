@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 FILE_DIRECTORY = "..\\training_file"
 #IP+port
-BASE_URL = "http://140.119.157.59:5000"
+BASE_URL = "http://10.232.73.192:5000"
 
 def allowed_file(filename, extension):
     return "." in filename and filename.rsplit(".", 1)[1].lower() == extension
@@ -423,9 +423,9 @@ def get_model_status(model_Id):
         
         #查看是否有照片
         if trained_model_status.modelphoto is None:
-            photo_path ='default_avatar.png'
+            photo_path ='avatar.png'
         else:
-            photo_path = f"{trained_model_status.user_id}/{trained_model_status.modelphoto}"
+            photo_path = trained_model_status.modelphoto
         # 查詢相關的訓練檔案
         training_file_status = TrainingFileRepo.find_first_training_file_by_user_and_model_id(user.id, model_Id)
         if not training_file_status:
