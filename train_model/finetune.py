@@ -41,11 +41,20 @@ def tokenize(tokenizer, prompt, add_eos_token=True):
 
 
 def generate_prompt(data_point):
-    return (
-        "以下是一個描述任務的指令，以及一個與任務資訊相關的輸入。請撰寫一個能適當完成此任務指令的回覆\n\n"
-        f'### 指令：\n{data_point["instruction"]}\n\n### 輸入：\n{data_point["input"]}\n\n'
-        f'### 回覆：\n{data_point["output"]}'
-    )
+    instruction = data_point.get("instruction", "")
+    input_text = data_point.get("input", "")
+    output_text = data_point.get("output", "")
+
+    prompt = f"""\
+        [INST] <<SYS>>請依照情境做正確、合理以及和過去相似語氣的回答
+        
+        <</SYS>>
+
+        {instruction}
+        {input_text}
+    [/INST]"""
+    return prompt + " " + output_text + "</s>"
+
 
 def train(id: str, model_dir: str, save_dir: str, data_path: str):
     device_map = "auto" if torch.cuda.is_available() else "cpu"
@@ -114,9 +123,11 @@ def train(id: str, model_dir: str, save_dir: str, data_path: str):
 
     print("Starting training...")
     trainer.train()
+
     print("Saving model and tokenizer...")
-    model.save_pretrained(save_dir)
+    model.config.save_pretrained(save_dir)
     tokenizer.save_pretrained(save_dir)
-    
-    model = get_peft_model(model, peft_args)
+
     model.save_pretrained(save_dir)
+
+    print("Training and saving completed.")
