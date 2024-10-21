@@ -7,6 +7,7 @@ class TrainingFile(db.Model):
     __tablename__ = "training_file"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    model_id = db.Column(db.Integer, db.ForeignKey("trained_model.id"))
     filename = db.Column(db.String(50), nullable=False)
     # original_file_name是user上傳時，本機的file name
     original_file_name = db.Column(db.String(255), nullable=False)
@@ -15,8 +16,9 @@ class TrainingFile(db.Model):
     upload_time = db.Column(DateTime(timezone=True), default=func.now())
 
     # 上傳file後先生成TrainingFile物件，再從TrainingFile object拿filename做為檔名存file。
-    def __init__(self, user_id, original_file_name, filename=None):
+    def __init__(self, user_id, model_id,original_file_name, filename=None):
         self.user_id = user_id
+        self.model_id = model_id
         if filename is not None:
             self.filename = filename
         else:
