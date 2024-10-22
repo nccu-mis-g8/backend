@@ -7,8 +7,8 @@ import logging
 
 class TrainingFileRepo:
     @staticmethod
-    def create_trainingfile(user_id, original_file_name, filename=None) -> Optional[TrainingFile]:
-        file = TrainingFile(user_id=user_id, original_file_name=original_file_name, filename=filename)
+    def create_trainingfile(user_id, model_id, original_file_name, filename=None) -> Optional[TrainingFile]:
+        file = TrainingFile(user_id=user_id, model_id=model_id, original_file_name=original_file_name, filename=filename)
         db.session.add(file)
         try:
             db.session.commit()
@@ -39,6 +39,10 @@ class TrainingFileRepo:
     @staticmethod
     def find_first_training_file_by_user_id(user_id) -> Optional[TrainingFile]:
         return TrainingFile.query.filter_by(user_id=user_id).first()
+    
+    @staticmethod
+    def find_first_training_file_by_user_and_model_id(user_id, model_id) -> Optional[TrainingFile]:
+        return TrainingFile.query.filter_by(user_id=user_id, model_id=model_id).first()
 
     @staticmethod
     def delete_training_file_by_file_id(file_id):

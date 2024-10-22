@@ -5,6 +5,7 @@ from flask import (
 )
 from flasgger import swag_from
 from flask_jwt_extended import get_jwt_identity, jwt_required
+from repository.trainedmodel_repo import TrainedModelRepo
 from repository.trainingfile_repo import TrainingFileRepo
 from models.user import User
 import json
@@ -17,10 +18,17 @@ logger = logging.getLogger(__name__)
 
 
 FILE_DIRECTORY = "..\\training_file"
-
+#IP+port
+BASE_URL = "http://10.232.73.192:5000"
 
 def allowed_file(filename, extension):
     return "." in filename and filename.rsplit(".", 1)[1].lower() == extension
+
+
+# TODO: remove this api after testing
+@utils_bp.get("/")
+def hello_world():
+    return "Hello, World!"
 
 
 @utils_bp.post("/user/upload_csv_file")
@@ -29,12 +37,14 @@ def allowed_file(filename, extension):
     {
         "tags": ["Utils"],
         "description": """
-        此API 用於上傳 CSV 檔案。
+        此API 用於上傳或更新 CSV 檔案。
 
         Input:
         - `Authorization` header 必須包含 Bearer token 以進行身份驗證。
-        - user_info: 使用者的資訊，必須是 JSON 格式。
+        - user_info: 使用者的資訊，必須是 JSON 格式，其中包含 `model_Id`。
         - file: 要上傳的 CSV 檔案。
+
+        如果同一用戶和模型的檔案已存在且尚未完成訓練，將會覆蓋原有檔案。
         """,
         "parameters": [
             {
@@ -47,9 +57,9 @@ def allowed_file(filename, extension):
             {
                 "name": "user_info",
                 "in": "formData",
-                "type": "string",
                 "required": True,
-                "description": "User information in JSON format",
+                "description": "User information in JSON format, must include `model_Id`",
+                "schema": {"type": "string", "example": '{"model_Id": "1"}'},
             },
             {
                 "name": "file",
@@ -61,24 +71,33 @@ def allowed_file(filename, extension):
         ],
         "responses": {
             "200": {
-                "description": "File uploaded successfully",
+                "description": "File uploaded successfully or updated if a previous file existed and was not trained",
                 "examples": {
                     "application/json": {"message": "File uploaded successfully"}
                 },
             },
             "400": {
-                "description": "Bad request due to missing file or wrong file type",
+                "description": "Bad request due to missing file, missing `model_Id`, or wrong file type",
                 "examples": {
-                    "application/json": {"error": "No file part in the request"}
+                    "application/json": {
+                        "error": "No file part in the request",
+                        "error": "No file provided",
+                        "error": "model_Id is missing",
+                        "error": "File type not allowed. Only CSV files are allowed."
+                    }
                 },
             },
             "403": {
-                "description": "Forbidden request",
+                "description": "Forbidden request due to missing user info",
                 "examples": {"application/json": {"error": "Forbidden"}},
             },
+            "404": {
+                "description": "User not found",
+                "examples": {"application/json": {"message": "使用者不存在"}},
+            },
             "500": {
-                "description": "Internal Error",
-                "examples": {"application/json": {"error": "Internal Server Error"}},
+                "description": "Internal Error due to failure in saving the file",
+                "examples": {"application/json": {"error": "Unable to create file."}},
             },
         },
     }
@@ -97,13 +116,13 @@ def upload_csv_file():
     else:
         return jsonify({"error": "Forbidden"}), 403
 
-    # 獲取 userId
-    user_id = user_info.get("user_Id")
-
-    # 確認使用者是否存在
-    user_exists = User.is_user_id_exists(user_id)
-    if not user_exists:
-        return jsonify({"error": "User ID not found"}), 404
+    # 獲取 model_Id
+    model_id = user_info.get("model_Id")
+    
+    # 確認 model_Id 是否存在
+    model_exists = TrainedModelRepo.is_model_id_exists(model_id)
+    if not model_exists:
+        return jsonify({"error": "Model ID not found in database"}), 404
 
     # 確認 request 中是否有檔案
     if "file" not in request.files:
@@ -122,8 +141,8 @@ def upload_csv_file():
         if not os.path.exists(FILE_DIRECTORY):
             os.makedirs(FILE_DIRECTORY)
 
-        current_file = TrainingFileRepo.find_first_training_file_by_user_id(
-            user_id=user_id
+        current_file = TrainingFileRepo.find_first_training_file_by_user_and_model_id(
+            user_id=user.id, model_id=model_id
         )
 
         is_renew = False  # 是否是覆蓋舊的
@@ -135,7 +154,7 @@ def upload_csv_file():
             is_renew = True
         # 儲存檔案
         saved_file = TrainingFileRepo.create_trainingfile(
-            user_id=user_id, original_file_name=file.filename
+            user_id=user.id, model_id=model_id, original_file_name=file.filename
         )
         if saved_file is None:
             return (
@@ -151,136 +170,6 @@ def upload_csv_file():
             jsonify({"error": "File type not allowed. Only CSV files are allowed."}),
             400,
         )
-
-
-@utils_bp.post("/user/training_files")
-@jwt_required()
-@swag_from(
-    {
-        "tags": ["Utils"],
-        "description": """
-    此 API 用於拿到指定 user_Id 的訓練檔案。用戶必須通過 Bearer token 進行身份驗證，並且在請求體中提供 `user_Id` 來獲取相應的訓練檔案。
-
-    Input:
-    - `Authorization` header 必須包含 Bearer token 以進行身份驗證。
-    - `user_Id` 在請求體中傳遞，指定用戶 ID 來獲取訓練檔案。
-    """,
-        "parameters": [
-            {
-                "name": "Authorization",
-                "in": "header",
-                "required": True,
-                "description": "Bearer token for authorization",
-                "schema": {"type": "string", "example": "Bearer "},
-            },
-            {
-                "name": "user_Id",
-                "in": "formData",
-                "type": "string",
-                "required": True,
-                "description": "User id in JSON format",
-                "example": '{"user_Id": "5"}',
-            },
-        ],
-        "responses": {
-            "200": {
-                "description": "A training file object for the user",
-                "schema": {
-                    "type": "object",
-                    "properties": {
-                        "id": {"type": "integer", "example": 1},
-                        "user_Id": {"type": "integer", "example": 123},
-                        "filename": {"type": "string", "example": "file.csv"},
-                        "original_file_name": {
-                            "type": "string",
-                            "example": "my_file.csv",
-                        },
-                        "is_trained": {"type": "boolean", "example": False},
-                        "upload_time": {
-                            "type": "string",
-                            "example": "2024-09-26 15:30:00",
-                        },
-                    },
-                },
-            },
-            "400": {
-                "description": "Invalid user_Id",
-                "schema": {
-                    "type": "object",
-                    "properties": {
-                        "message": {"type": "string", "example": "Invalid user_Id"},
-                    },
-                },
-            },
-            "404": {
-                "description": "No training files found for this user",
-                "schema": {
-                    "type": "object",
-                    "properties": {
-                        "message": {
-                            "type": "string",
-                            "example": "No training files found for this user。",
-                        },
-                    },
-                },
-            },
-            "500": {
-                "description": "Server error while fetching training files",
-                "schema": {
-                    "type": "object",
-                    "properties": {
-                        "message": {
-                            "type": "string",
-                            "example": "An error occurred while fetching training files。",
-                        },
-                    },
-                },
-            },
-        },
-    }
-)
-def get_user_training_files():
-    current_email = get_jwt_identity()
-
-    # 從資料庫中查詢使用者
-    user = User.get_user_by_email(current_email)
-    if user is None:
-        return jsonify(message="使用者不存在"), 404
-
-    user_Id = request.form.get("user_Id")
-
-    # 確認使用者是否存在
-    user_exists = User.is_user_id_exists(user_Id)
-    if not user_exists:
-        return jsonify({"error": "User ID not found"}), 404
-
-    try:
-        training_file = TrainingFileRepo.find_first_training_file_by_user_id(user_Id)
-
-        if not training_file:
-            return jsonify({"message": "No training files found for this user."}), 404
-
-    except Exception as e:
-        logging.error(f"Error retrieving training files for user {user}: {e}")
-        return (
-            jsonify({"message": "An error occurred while fetching training files."}),
-            500,
-        )
-
-    return (
-        jsonify(
-            {
-                "id": training_file.id,
-                "user_id": training_file.user_id,
-                "filename": training_file.filename,
-                "original_file_name": training_file.original_file_name,
-                "is_trained": training_file.is_trained,
-                "upload_time": training_file.upload_time.strftime("%Y-%m-%d %H:%M:%S"),
-            }
-        ),
-        200,
-    )
-
 
 @utils_bp.post("/user/upload_txt_file")
 @jwt_required()
@@ -307,7 +196,7 @@ def get_user_training_files():
                 "description": "JSON string containing user_Id and master_name",
                 "required": True,
                 "type": "string",
-                "example": '{"user_Id": "12345", "master_name": "John"}',
+                "schema": {"type": "string", "example": '{"model_Id": "1", "master_name": "John"}'},
             },
             {
                 "name": "file",
@@ -337,7 +226,7 @@ def get_user_training_files():
                     "properties": {
                         "error": {
                             "type": "string",
-                            "example": "user_Id or master_name is missing",
+                            "example": "model_Id or master_name is missing",
                         }
                     },
                 },
@@ -394,12 +283,11 @@ def upload_txt_file():
     else:
         return jsonify({"error": "Forbidden"}), 403
 
-    # 獲取 userId 和 master_name
-    user_id = user_info.get("user_Id")
+    model_id = user_info.get("model_Id")    
     master_name = user_info.get("master_name")
 
-    if not user_id or not master_name:
-        return jsonify({"error": "user_Id or master_name is missing"}), 400
+    if not master_name or not model_id:
+        return jsonify({"error": "master_name or model_id is missing"}), 400
 
     # 確認 request 中是否有檔案
     if "file" not in request.files:
@@ -419,17 +307,16 @@ def upload_txt_file():
 
         # 處理 line chat 的文件
         processor = linetxt_to_llama.LineChatProcessor(
-            output_name=user_id, master_name=master_name, data_dir=FILE_DIRECTORY
+            output_name=user.id, master_name=master_name, data_dir=FILE_DIRECTORY
         )
         try:
-            csv_file_name = processor.process(file)  # 假設 process 方法需要文件來處理
-            print(csv_file_name)
+            csv_file_name = processor.process(file)  # process 方法需要文件來處理
         except Exception as e:
             return jsonify({"error": f"File processing error: {str(e)}"}), 500
 
         # 確認是否已有未完成的訓練文件，並刪除
-        current_file = TrainingFileRepo.find_first_training_file_by_user_id(
-            user_id=user_id
+        current_file = TrainingFileRepo.find_first_training_file_by_user_and_model_id(
+            user_id=user.id, model_id=model_id
         )
         if current_file is not None and not current_file.is_trained:
             try:
@@ -446,7 +333,7 @@ def upload_txt_file():
 
         # 儲存檔案
         saved_file = TrainingFileRepo.create_trainingfile(
-            user_id=user_id, original_file_name=file.filename, filename=csv_file_name
+            user_id=user.id, model_id=model_id,original_file_name=file.filename, filename=csv_file_name
         )
         if saved_file is None:
             return jsonify({"error": "Unable to create file."}), 500
@@ -457,3 +344,115 @@ def upload_txt_file():
             jsonify({"error": "File type not allowed. Only TXT files are allowed."}),
             400,
         )
+
+
+
+@utils_bp.get("/user/model_status/<int:model_Id>")
+@jwt_required()
+@swag_from({
+    "tags": ["Utils"],
+    'description': '取得指定使用者和模型的訓練狀態和相關信息。',
+    'parameters': [
+        {
+            'name': 'Authorization',
+            'in': 'header',
+            'required': True,
+            'description': 'JWT Token to authorize the request',
+            "schema": {"type": "string", "example": "Bearer "},
+        },
+        {
+            'name': 'model_Id',
+            'in': 'path',
+            'required': True,
+            'description': '欲查詢的模型ID',
+            "schema": {"type": "integer", 'example': 1},
+        }
+    ],
+    'responses': {
+        200: {
+            'description': '訓練模型狀態資料',
+            'content': {
+                'application/json': {
+                    'schema': {
+                        'type': 'object',
+                        'properties': {
+                            'user_id': {'type': 'integer', 'description': '使用者ID'},
+                            'training_file_id': {'type': 'integer', 'description': '訓練文件ID'},
+                            'filename': {'type': 'string', 'description': '保存的文件名稱'},
+                            'original_file_name': {'type': 'string', 'description': '原始上傳文件名'},
+                            'start_train': {'type': 'boolean', 'description': '是否開始訓練'},
+                            'is_trained': {'type': 'boolean', 'description': '是否訓練完成'},
+                            'file_upload_time': {'type': 'string', 'format': 'date-time', 'description': '文件上傳時間'},
+                            'model_id': {'type': 'integer', 'description': '模型ID'},
+                            'model_name': {'type': 'string', 'description': '模型名稱'},
+                            'model_photo': {'type': 'string', 'description': '模型照片路徑'},
+                            'model_anticipation': {'type': 'string', 'description': '模型描述'}
+                        }
+                    }
+                }
+            }
+        },
+        400: {
+            'description': '模型ID為必填項或格式錯誤'
+        },
+        404: {
+            'description': '使用者或模型不存在'
+        },
+        500: {
+            'description': '伺服器錯誤，無法取得模型狀態'
+        }
+    }
+})
+def get_model_status(model_Id):
+    current_email = get_jwt_identity()
+
+    # 從資料庫中查詢使用者
+    user = User.get_user_by_email(current_email)
+    if user is None:
+        return jsonify(message="使用者不存在"), 404
+    
+    model_exists = TrainedModelRepo.is_model_id_exists(model_Id)
+    if not model_exists:
+        return jsonify({"error": "Model ID not found in database"}), 404
+
+    try:
+        # 查詢使用者的第一個已訓練模型
+        trained_model_status = TrainedModelRepo.find_trainedmodel_by_user_and_model_id(user.id, model_Id)
+        if not trained_model_status:
+            return jsonify({"message": "No trained model found for this user."}), 404
+        
+        #查看是否有照片
+        if trained_model_status.modelphoto is None:
+            photo_path ='avatar.png'
+        else:
+            photo_path = trained_model_status.modelphoto
+        # 查詢相關的訓練檔案
+        training_file_status = TrainingFileRepo.find_first_training_file_by_user_and_model_id(user.id, model_Id)
+        if not training_file_status:
+            return jsonify({"message": "No training files found for this user."}), 404
+
+    except Exception as e:
+        logging.error(f"Error retrieving training files or trained model for user {user}: {e}")
+        return (
+            jsonify({"message": "An error occurred while fetching training files or trained model."}),
+            500,
+        )
+
+    return (
+        jsonify(
+            {
+                "user_id": training_file_status.user_id,
+                "training_file_id": training_file_status.id,
+                "filename": training_file_status.filename,
+                "original_file_name": training_file_status.original_file_name,
+                "start_train": training_file_status.start_train,
+                "is_trained": training_file_status.is_trained,
+                "file_upload_time": training_file_status.upload_time.strftime("%Y-%m-%d %H:%M:%S"),
+                "model_id": trained_model_status.id,
+                "model_name": trained_model_status.modelname,
+                "model_photo": f'{BASE_URL}/userinfo/images/{photo_path}',
+                "model_anticipation": trained_model_status.anticipation,
+            }
+        ),
+        200,
+    )
