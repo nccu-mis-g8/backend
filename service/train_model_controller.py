@@ -53,11 +53,11 @@ logger = logging.getLogger(__name__)
                 "schema": {"type": "string", "example": "Bearer "},
             },
             {
-                "name": "user_info",
+                "name": "model_id",
                 "in": "formData",
-                "required": False,
-                "description": "User information in JSON format. Required if not using default parameters.",
-                "schema": {"type": "string", "example": '{"user_Id": "12345"}'},
+                "required": True,
+                "description": "The model ID used for training",
+                "schema": {"type": "integer", "example": 123},
             },
         ],
         "responses": {
@@ -78,8 +78,8 @@ logger = logging.getLogger(__name__)
                 "examples": {"application/json": {"error": "Forbidden"}},
             },
             404: {
-                "description": "User not found",
-                "examples": {"application/json": {"message": "使用者不存在"}},
+                "description": "User or model not found",
+                "examples": {"application/json": {"message": "使用者或模型不存在"}},
             },
             500: {
                 "description": "Internal server error",
@@ -97,46 +97,48 @@ def train_model():
     user = User.get_user_by_email(current_email)
     if user is None:
         return jsonify(message="使用者不存在"), 404
+    
+    model_id = request.form.get("model_id")
+    if not model_id:
+        return jsonify({"error": "model_id is required"}), 400
 
-    user_info = request.form.get("user_info")
-    if user_info:
-        user_info = json.loads(user_info)
-    else:
-        return jsonify({"error": "Forbidden"}), 403
-
-    # 獲取 userId
-    user_id = user_info.get("user_Id")
     try:
-        # 取得user要train的file
-        training_file = TrainingFileRepo.find_first_training_file_by_user_id(
-            user_id=user_id
+        trained_model = TrainedModelRepo.find_trainedmodel_by_user_and_model_id(
+            user_id=user.id, model_id=model_id
         )
+        if trained_model is None:
+            return jsonify({"error": "Model not found"}), 404
+
+        training_file = TrainingFileRepo.find_first_training_file_by_user_and_model_id(
+            user_id=user.id, model_id=model_id
+        )
+
         if training_file is None:
-            return (
-                jsonify({"status": "no file to train"}),
-                400,
-            )
+            return jsonify({"status": "no file to train"}), 400
+
         file_path = os.path.join(FILE_DIRECTORY, training_file.filename)
 
         if not os.path.exists(file_path):
-            return (
-                jsonify({"status": "no file to train"}),
-                400,
-            )
+            return jsonify({"status": "no file to train"}), 400
 
-        saved_models = TrainedModelRepo.find_all_trainedmodel_by_user_id(user_id)
-        new_model = TrainedModelRepo.create_trainedmodel(user_id)
-        if new_model is None:
-            return jsonify({"status": "Error", "message": "Internel Error"}), 500
+        saved_models = TrainedModelRepo.find_all_trainedmodel_by_user_id(user_id=user.id)
+        
         training_file.start_train = True
         TrainingFileRepo.save_training_file()
-        # 如果是第一次
-        if len(saved_models) == 0:
+
+
+        TrainedModelRepo.start_trainedmodel(user_id=user.id, model_id=model_id)
+
+    
+        model_path = os.path.join("..\\saved_models", trained_model.modelname)
+        print(model_path)
+        # 如果是第一次训练
+        if len(saved_models) == 0 or trained_model.id == model_id:
             print("第一次訓練")
             train(
-                str(new_model.id),
+                str(trained_model.id),
                 BASE_MODEL_DIR,
-                str(os.path.join("..\\saved_models", new_model.modelname)),
+                model_path,
                 os.path.join(FILE_DIRECTORY, file_path),
             )
         else:
@@ -144,24 +146,24 @@ def train_model():
             print(f"接續舊的model: {last_model.id} 繼續訓練")
             # 已經練過了，接續之前練過的model再訓練
             train(
-                str(new_model.id),
-                str(os.path.join("..\\saved_models", last_model.modelname)),
-                str(os.path.join("..\\saved_models", new_model.modelname)),
+                str(trained_model.id),
+                os.path.join("..\\saved_models", last_model.modelname),
+                model_path,
                 os.path.join(FILE_DIRECTORY, file_path),
             )
 
-        # 把拿去train的資料is_trained設成true
         training_file.is_trained = True
         TrainingFileRepo.save_training_file()
+
         return (
             jsonify(
-                {"status": f"Training started successfully. Model id: {new_model.id}"}
+                {"status": "Training started successfully", "model_id": trained_model.id}
             ),
             200,
         )
+
     except Exception as e:
         return jsonify({"status": "Error", "message": str(e)}), 500
-
 
 @train_model_bp.post("/chat")
 @jwt_required()
@@ -238,19 +240,23 @@ def chat():
     if user is None:
         return jsonify(message="使用者不存在"), 404
 
-    user_info = request.form.get("user_info")
-    if user_info:
-        user_info = json.loads(user_info)
+    user_id = request.form.get("user_id")
+    if user_id:
+        user_id = json.loads(user_id)
     else:
         return jsonify({"error": "Forbidden"}), 403
 
-    # 獲取 userId
-    user_id = user_info.get("user_Id")
-    trained_model = TrainedModelRepo.find_trainedmodel_by_user_id(user_id=user_id)
+    model_id = request.form.get("model_id")
+    if not model_id:
+        return jsonify({"error": "model_id is required"}), 400
+
+    trained_model = TrainedModelRepo.find_trainedmodel_by_user_and_model_id(
+        user_id=user_id, model_id=model_id
+    )
 
     if trained_model is None:
         return jsonify({"error": "Model not found"}), 404
-
+    # print(user_id)
     model_dir = os.path.abspath(
         os.path.join("..", "saved_models", trained_model.modelname)
     )
@@ -264,7 +270,7 @@ def chat():
         return jsonify({"error": "Input text is required"}), 400
 
     try:
-        responses = inference(model_dir, input_text, user_id)
+        responses = inference(model_dir, input_text, user.id)
 
         if responses is None:
             return jsonify({"error": "Inference failed"}), 500

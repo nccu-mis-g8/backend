@@ -451,7 +451,7 @@ def create_model():
                 os.makedirs(user_folder)
 
             file.save(os.path.join(user_folder, saved_model.modelphoto))
-            return jsonify({"message": "model created successfully"}), 200
+            return jsonify({"message": "model created successfully", "model_id": saved_model.id}), 200
         else:
             return (
                 jsonify({"error": "File type not allowed. Only png, jpg, jpeg files are allowed."}),
