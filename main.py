@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from flask_swagger_ui import get_swaggerui_blueprint
 from flasgger import Swagger
 
+from waitress import serve
 
 load_dotenv()
 
@@ -62,5 +63,7 @@ def create_tables():
     db.create_all()
 
 
+
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=8080, debug=True)
+    # app.run(host='0.0.0.0', port=8080, debug=True)
+    serve(app, host='0.0.0.0', port=8080)
