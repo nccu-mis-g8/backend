@@ -349,12 +349,12 @@ def get_image(photoname):
             }
         },
         {
-            "name": "model_name",
+            "name": "model_original_name",
             "in": "formData",
             "required": True,
             "type": "string",
-            "description": "model_name",
-            "example": "model_name"
+            "description": "model_original_name",
+            "example": "model_original_name"
         },
         {
             "name": "anticipation",
@@ -410,9 +410,9 @@ def create_model():
     if user_id is None:
         return jsonify({"error": "User ID not found"}), 404
 
-    model_name = request.form.get("model_name")
-    if model_name is None or model_name == "":
-        return jsonify({"error": "model_name is required"}), 400
+    model_original_name = request.form.get("model_original_name")
+    if model_original_name is None or model_original_name == "":
+        return jsonify({"error": "model_original_name is required"}), 400
     
     anticipation = request.form.get("anticipation")
     if anticipation == "":
@@ -439,7 +439,7 @@ def create_model():
                             
             # 儲存檔案
             saved_model = TrainedModelRepo.create_trainedmodel(
-                user_id=user_id, modelname=model_name, modelphoto=model_photo, anticipation=anticipation
+                user_id=user_id, model_original_name=model_original_name, modelphoto=model_photo, anticipation=anticipation
             )
             if not saved_model:
                 return (
@@ -451,7 +451,7 @@ def create_model():
                 os.makedirs(user_folder)
 
             file.save(os.path.join(user_folder, saved_model.modelphoto))
-            return jsonify({"message": "model created successfully"}), 200
+            return jsonify({"message": "model created successfully", "model_id": saved_model.id}), 200
         else:
             return (
                 jsonify({"error": "File type not allowed. Only png, jpg, jpeg files are allowed."}),
