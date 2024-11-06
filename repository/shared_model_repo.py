@@ -2,18 +2,26 @@ from typing import Dict, Optional
 
 from models.shared_model import SharedModel
 from extensions import db
+from models.trained_model import TrainedModel
 
 
 class SharedModelRepo:
     @staticmethod
-    def create_shared_model(model_id) -> Optional[SharedModel]:
-        result = SharedModel(model_id)
+    def create_shared_model(model: TrainedModel) -> Optional[SharedModel]:
+        result = SharedModel(model.id)
+        res = SharedModelRepo.save()
+        if res:
+            return result
+        return None
+
+    @staticmethod
+    def save() -> bool:
         try:
             db.session.commit()
-            return result
+            return True
         except Exception:
             db.session.rollback()
-            return None
+            return False
 
     @staticmethod
     def obtain_shared_model(link, acquirer_id) -> Dict:

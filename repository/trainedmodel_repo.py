@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from sqlalchemy import desc
 
@@ -31,7 +31,7 @@ class TrainedModelRepo:
         return model
 
     @staticmethod
-    def start_trainedmodel(user_id, model_id) -> TrainedModel:
+    def start_trainedmodel(user_id, model_id) -> Optional[TrainedModel]:
         model = TrainedModel.query.filter_by(user_id=user_id, id=model_id).first()
         model.start_time = db.func.now()
         TrainedModelRepo.save()
@@ -42,7 +42,7 @@ class TrainedModelRepo:
         try:
             db.session.commit()
             return True
-        except Exception as e:
+        except Exception:
             db.session.rollback()
             return False
 
