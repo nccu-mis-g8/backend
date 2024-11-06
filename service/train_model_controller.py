@@ -4,7 +4,9 @@ import logging
 import json
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
+
 from models.user import User
+from repository.shared_model_repo import SharedModelRepo
 from repository.trainedmodel_repo import TrainedModelRepo
 from repository.trainingfile_repo import TrainingFileRepo
 from service.utils_controller import FILE_DIRECTORY
@@ -284,3 +286,31 @@ def chat():
         )
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@train_model_bp.post("/share-model")
+@jwt_required()
+def share_model():
+    current_email = get_jwt_identity()
+
+    # 從資料庫中查詢使用者
+    user = User.get_user_by_email(current_email)
+    if user is None:
+        return jsonify(message="使用者不存在"), 404
+
+
+@train_model_bp.route("/model/<str:link>", methods=["GET"])
+@jwt_required()
+def get_shared_model(link: str):
+    current_email = get_jwt_identity()
+
+    # 從資料庫中查詢使用者
+    user = User.get_user_by_email(current_email)
+    if user is None:
+        return jsonify(message="使用者不存在"), 404
+    res = SharedModelRepo.obtain_shared_model(link, user.id)
+    # 成功
+    if res["res"]:
+        return jsonify(message="成功取得模型權限"), 200
+    # 失敗
+    return jsonify(message=res["msg"]), 404
