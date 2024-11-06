@@ -9,12 +9,14 @@ class SharedModel(db.Model):
     create_date: DateTime = db.Column(
         DateTime(timezone=True), nullable=False, default=func.now()
     )
-    # 模型的主人
-    owner_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    # 模型
+    model_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     # 取走模型的人（一個link只能用一次）
-    acquirer_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    acquirer_id = db.Column(
+        db.Integer, db.ForeignKey("trained_model.id"), nullable=True
+    )
     link: str = db.Column(db.String(50), nullable=False)
 
-    def __init__(self, owner_id):
-        self.owner_id = owner_id
+    def __init__(self, model_id):
+        self.model_id = model_id
         self.link = str(uuid.uuid4())
