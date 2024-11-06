@@ -18,8 +18,9 @@ logger = logging.getLogger(__name__)
 
 
 FILE_DIRECTORY = "..\\training_file"
-#IP+port
+# IP+port
 BASE_URL = "http://10.232.73.192:5000"
+
 
 def allowed_file(filename, extension):
     return "." in filename and filename.rsplit(".", 1)[1].lower() == extension
@@ -83,7 +84,7 @@ def hello_world():
                         "error": "No file part in the request",
                         "error": "No file provided",
                         "error": "model_Id is missing",
-                        "error": "File type not allowed. Only CSV files are allowed."
+                        "error": "File type not allowed. Only CSV files are allowed.",
                     }
                 },
             },
@@ -118,7 +119,7 @@ def upload_csv_file():
 
     # 獲取 model_Id
     model_id = user_info.get("model_Id")
-    
+
     # 確認 model_Id 是否存在
     model_exists = TrainedModelRepo.is_model_id_exists(model_id)
     if not model_exists:
@@ -171,6 +172,7 @@ def upload_csv_file():
             400,
         )
 
+
 @utils_bp.post("/user/upload_txt_file")
 @jwt_required()
 @swag_from(
@@ -196,7 +198,10 @@ def upload_csv_file():
                 "description": "JSON string containing user_Id and master_name",
                 "required": True,
                 "type": "string",
-                "schema": {"type": "string", "example": '{"model_Id": "1", "master_name": "John"}'},
+                "schema": {
+                    "type": "string",
+                    "example": '{"model_Id": "1", "master_name": "John"}',
+                },
             },
             {
                 "name": "file",
@@ -283,7 +288,7 @@ def upload_txt_file():
     else:
         return jsonify({"error": "Forbidden"}), 403
 
-    model_id = user_info.get("model_Id")    
+    model_id = user_info.get("model_Id")
     master_name = user_info.get("master_name")
 
     if not master_name or not model_id:
@@ -333,7 +338,10 @@ def upload_txt_file():
 
         # 儲存檔案
         saved_file = TrainingFileRepo.create_trainingfile(
-            user_id=user.id, model_id=model_id,original_file_name=file.filename, filename=csv_file_name
+            user_id=user.id,
+            model_id=model_id,
+            original_file_name=file.filename,
+            filename=csv_file_name,
         )
         if saved_file is None:
             return jsonify({"error": "Unable to create file."}), 500
@@ -346,63 +354,83 @@ def upload_txt_file():
         )
 
 
-
 @utils_bp.get("/user/model_status/<int:model_Id>")
 @jwt_required()
-@swag_from({
-    "tags": ["Utils"],
-    'description': '取得指定使用者和模型的訓練狀態和相關信息。',
-    'parameters': [
-        {
-            'name': 'Authorization',
-            'in': 'header',
-            'required': True,
-            'description': 'JWT Token to authorize the request',
-            "schema": {"type": "string", "example": "Bearer "},
-        },
-        {
-            'name': 'model_Id',
-            'in': 'path',
-            'required': True,
-            'description': '欲查詢的模型ID',
-            "schema": {"type": "integer", 'example': 1},
-        }
-    ],
-    'responses': {
-        200: {
-            'description': '訓練模型狀態資料',
-            'content': {
-                'application/json': {
-                    'schema': {
-                        'type': 'object',
-                        'properties': {
-                            'user_id': {'type': 'integer', 'description': '使用者ID'},
-                            'training_file_id': {'type': 'integer', 'description': '訓練文件ID'},
-                            'filename': {'type': 'string', 'description': '保存的文件名稱'},
-                            'original_file_name': {'type': 'string', 'description': '原始上傳文件名'},
-                            'start_train': {'type': 'boolean', 'description': '是否開始訓練'},
-                            'is_trained': {'type': 'boolean', 'description': '是否訓練完成'},
-                            'file_upload_time': {'type': 'string', 'format': 'date-time', 'description': '文件上傳時間'},
-                            'model_id': {'type': 'integer', 'description': '模型ID'},
-                            'model_name': {'type': 'string', 'description': '模型名稱'},
-                            'model_photo': {'type': 'string', 'description': '模型照片路徑'},
-                            'model_anticipation': {'type': 'string', 'description': '模型描述'}
+@swag_from(
+    {
+        "tags": ["Utils"],
+        "description": "取得指定使用者和模型的訓練狀態和相關信息。",
+        "parameters": [
+            {
+                "name": "Authorization",
+                "in": "header",
+                "required": True,
+                "description": "JWT Token to authorize the request",
+                "schema": {"type": "string", "example": "Bearer "},
+            },
+            {
+                "name": "model_Id",
+                "in": "path",
+                "required": True,
+                "description": "欲查詢的模型ID",
+                "schema": {"type": "integer", "example": 1},
+            },
+        ],
+        "responses": {
+            200: {
+                "description": "訓練模型狀態資料",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "user_id": {"type": "integer", "description": "使用者ID"},
+                                "training_file_id": {
+                                    "type": "integer",
+                                    "description": "訓練文件ID",
+                                },
+                                "filename": {
+                                    "type": "string",
+                                    "description": "保存的文件名稱",
+                                },
+                                "original_file_name": {
+                                    "type": "string",
+                                    "description": "原始上傳文件名",
+                                },
+                                "start_train": {
+                                    "type": "boolean",
+                                    "description": "是否開始訓練",
+                                },
+                                "is_trained": {
+                                    "type": "boolean",
+                                    "description": "是否訓練完成",
+                                },
+                                "file_upload_time": {
+                                    "type": "string",
+                                    "format": "date-time",
+                                    "description": "文件上傳時間",
+                                },
+                                "model_id": {"type": "integer", "description": "模型ID"},
+                                "model_name": {"type": "string", "description": "模型名稱"},
+                                "model_photo": {
+                                    "type": "string",
+                                    "description": "模型照片路徑",
+                                },
+                                "model_anticipation": {
+                                    "type": "string",
+                                    "description": "模型描述",
+                                },
+                            },
                         }
                     }
-                }
-            }
+                },
+            },
+            400: {"description": "模型ID為必填項或格式錯誤"},
+            404: {"description": "使用者或模型不存在"},
+            500: {"description": "伺服器錯誤，無法取得模型狀態"},
         },
-        400: {
-            'description': '模型ID為必填項或格式錯誤'
-        },
-        404: {
-            'description': '使用者或模型不存在'
-        },
-        500: {
-            'description': '伺服器錯誤，無法取得模型狀態'
-        }
     }
-})
+)
 def get_model_status(model_Id):
     current_email = get_jwt_identity()
 
@@ -410,31 +438,43 @@ def get_model_status(model_Id):
     user = User.get_user_by_email(current_email)
     if user is None:
         return jsonify(message="使用者不存在"), 404
-    
+
     model_exists = TrainedModelRepo.is_model_id_exists(model_Id)
     if not model_exists:
         return jsonify({"error": "Model ID not found in database"}), 404
 
     try:
         # 查詢使用者的第一個已訓練模型
-        trained_model_status = TrainedModelRepo.find_trainedmodel_by_user_and_model_id(user.id, model_Id)
+        trained_model_status = TrainedModelRepo.find_trainedmodel_by_user_and_model_id(
+            user.id, model_Id
+        )
         if not trained_model_status:
             return jsonify({"message": "No trained model found for this user."}), 404
-        
-        #查看是否有照片
+
+        # 查看是否有照片
         if trained_model_status.modelphoto is None:
-            photo_path ='avatar.png'
+            photo_path = "avatar.png"
         else:
             photo_path = trained_model_status.modelphoto
         # 查詢相關的訓練檔案
-        training_file_status = TrainingFileRepo.find_first_training_file_by_user_and_model_id(user.id, model_Id)
+        training_file_status = (
+            TrainingFileRepo.find_first_training_file_by_user_and_model_id(
+                user.id, model_Id
+            )
+        )
         if not training_file_status:
             return jsonify({"message": "No training files found for this user."}), 404
 
     except Exception as e:
-        logging.error(f"Error retrieving training files or trained model for user {user}: {e}")
+        logging.error(
+            f"Error retrieving training files or trained model for user {user}: {e}"
+        )
         return (
-            jsonify({"message": "An error occurred while fetching training files or trained model."}),
+            jsonify(
+                {
+                    "message": "An error occurred while fetching training files or trained model."
+                }
+            ),
             500,
         )
 
@@ -447,10 +487,12 @@ def get_model_status(model_Id):
                 "original_file_name": training_file_status.original_file_name,
                 "start_train": training_file_status.start_train,
                 "is_trained": training_file_status.is_trained,
-                "file_upload_time": training_file_status.upload_time.strftime("%Y-%m-%d %H:%M:%S"),
+                "file_upload_time": training_file_status.upload_time.strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                ),
                 "model_id": trained_model_status.id,
                 "model_name": trained_model_status.modelname,
-                "model_photo": f'{BASE_URL}/userinfo/images/{photo_path}',
+                "model_photo": f"{BASE_URL}/userinfo/images/{photo_path}",
                 "model_anticipation": trained_model_status.anticipation,
             }
         ),

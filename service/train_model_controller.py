@@ -3,23 +3,13 @@ from flasgger import swag_from
 import logging
 import json
 from flask_jwt_extended import get_jwt_identity, jwt_required
-import torch
-import random
 
-import traceback
-import time
-
-from sqlalchemy.sql.functions import user
 from models.user import User
 from repository.trainedmodel_repo import TrainedModelRepo
 from repository.trainingfile_repo import TrainingFileRepo
 from service.utils_controller import FILE_DIRECTORY
 from train_model.finetune import BASE_MODEL_DIR, train
 from train_model.inference import inference
-from concurrent.futures import TimeoutError
-from requests.exceptions import RequestException
-from transformers import AutoTokenizer, AutoModelForCausalLM
-from peft import PeftModel
 import os
 
 
@@ -97,7 +87,7 @@ def train_model():
     user = User.get_user_by_email(current_email)
     if user is None:
         return jsonify(message="使用者不存在"), 404
-    
+
     model_id = request.form.get("model_id")
     if not model_id:
         return jsonify({"error": "model_id is required"}), 400
@@ -121,15 +111,15 @@ def train_model():
         if not os.path.exists(file_path):
             return jsonify({"status": "no file to train"}), 400
 
-        saved_models = TrainedModelRepo.find_all_trainedmodel_by_user_id(user_id=user.id)
-        
+        saved_models = TrainedModelRepo.find_all_trainedmodel_by_user_id(
+            user_id=user.id
+        )
+
         training_file.start_train = True
         TrainingFileRepo.save_training_file()
 
-
         TrainedModelRepo.start_trainedmodel(user_id=user.id, model_id=model_id)
 
-    
         model_path = os.path.join("..\\saved_models", trained_model.modelname)
         print(model_path)
         # 如果是第一次训练
@@ -157,13 +147,17 @@ def train_model():
 
         return (
             jsonify(
-                {"status": "Training started successfully", "model_id": trained_model.id}
+                {
+                    "status": "Training started successfully",
+                    "model_id": trained_model.id,
+                }
             ),
             200,
         )
 
     except Exception as e:
         return jsonify({"status": "Error", "message": str(e)}), 500
+
 
 @train_model_bp.post("/chat")
 @jwt_required()
