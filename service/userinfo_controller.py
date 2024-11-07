@@ -15,7 +15,7 @@ userinfo_bp = Blueprint("userinfo", __name__)
 logger = logging.getLogger(__name__)
 
 FILE_DIRECTORY = os.path.abspath("..\\user_photo_file")
-
+BASE_URL = "http://172.20.10.2:8080"
 
 def allowed_file(filename, extensions):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in extensions
@@ -150,7 +150,7 @@ def upload_photo():
         )
 
 
-@userinfo_bp.get("/user/get_photo/<int:user_id>")
+@userinfo_bp.get("/user/get_photo")
 @jwt_required()
 @swag_from(
     {
@@ -170,13 +170,7 @@ def upload_photo():
                 "description": "Bearer token for authorization",
                 "schema": {"type": "string", "example": "Bearer "},
             },
-            {
-                "name": "user_id",
-                "in": "path",
-                "type": "integer",
-                "required": True,
-                "description": "使用者的唯一ID",
-            },
+            
         ],
         "responses": {
             200: {
@@ -202,43 +196,24 @@ def upload_photo():
         },
     }
 )
-def get_photo(user_id):
+def get_photo():
     current_email = get_jwt_identity()
 
     # 從資料庫中查詢使用者
-    user = User.get_user_by_email(current_email)
-    if user is None:
+    user_id = User.get_user_by_email(current_email).id
+    if user_id is None:
         return jsonify(message="使用者不存在"), 404
-
-    # 確認使用者是否存在
-    user_exists = User.is_user_id_exists(user_id)
-    if not user_exists:
-        return jsonify({"error": "User ID not found"}), 404
 
     user_info = UserPhotoRepo.find_user_photo_by_user_id(user_id)
 
     # 如果使用者頭像是 null，則回傳預設圖片
-    if not user_info:
-        default_image_path = os.path.join(FILE_DIRECTORY, "default", "avatar.png")
-        if os.path.exists(default_image_path):
-            return send_file(default_image_path, mimetype="image/png")
-        else:
-            return jsonify({"error": "User or photo not found"}), 404
+    photo_name = "avatar.png"
 
-    user_folder = os.path.join(FILE_DIRECTORY, str(user_id))
-    file_path = os.path.join(user_folder, user_info.photoname)
-
-    # 檢查照片檔案是否存在
-    if not os.path.exists(file_path):
-        # 如果檔案不存在，也回傳預設圖片
-        default_image_path = os.path.join(FILE_DIRECTORY, "default", "avatar.png")
-        if os.path.exists(default_image_path):
-            return send_file(default_image_path, mimetype="image/png")
-        else:
-            return jsonify({"error": "User or photo not found"}), 404
+    if user_info:
+        photo_name =user_info.photoname
 
     # 傳回使用者的圖片檔案
-    return send_file(file_path, mimetype=mimetypes.guess_type(file_path)[0])
+    return jsonify({"photo": f"{BASE_URL}/userinfo/images/{photo_name}"}), 200
 
 
 @userinfo_bp.get("/images/<photoname>")
