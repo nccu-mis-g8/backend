@@ -20,8 +20,8 @@ from repository.userphoto_repo import UserPhotoRepo
 auth_bp = Blueprint("auth", __name__)
 logger = logging.getLogger(__name__)
 
-BASE_URL = "http://192.168.1.109:8080" # 這裡要改成主機的IP
-
+# BASE_URL = "http://192.168.1.109:8080" # 安的IP
+BASE_URL = "http://192.168.0.121:8080"   # 主機IP
 
 @auth_bp.post("/register")
 @swag_from({
