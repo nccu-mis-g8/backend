@@ -317,7 +317,7 @@ def share_model():
     )
 
 
-@train_model_bp.route("/model/<str:link>", methods=["GET"])
+@train_model_bp.route("/model/<string:link>", methods=["GET"])
 @jwt_required()
 def get_shared_model(link: str):
     current_email = get_jwt_identity()
