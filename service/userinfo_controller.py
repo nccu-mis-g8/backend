@@ -15,7 +15,7 @@ userinfo_bp = Blueprint("userinfo", __name__)
 logger = logging.getLogger(__name__)
 
 FILE_DIRECTORY = os.path.abspath("..\\user_photo_file")
-BASE_URL = "http://172.20.10.2:8080"
+BASE_URL = "http://192.168.1.109:8080" # 這裡要改成主機的IP
 
 def allowed_file(filename, extensions):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in extensions
