@@ -15,7 +15,7 @@ userinfo_bp = Blueprint("userinfo", __name__)
 logger = logging.getLogger(__name__)
 
 FILE_DIRECTORY = os.path.abspath("..\\user_photo_file")
-BASE_URL = "http://192.168.1.109:8080" # 這裡要改成主機的IP
+# BASE_URL = "http://192.168.1.109:8080" # 這裡要改成主機的IP
 
 def allowed_file(filename, extensions):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in extensions
@@ -150,74 +150,73 @@ def upload_photo():
         )
 
 
-@userinfo_bp.get("/user/get_photo")
-@jwt_required()
-@swag_from(
-    {
-        "tags": ["UserInfo"],
-        "description": """
-    此API用於拿取使用者頭貼，支援格式為 JPG, JPEG, PNG。
+# @userinfo_bp.get("/user/get_photo")
+# @jwt_required()
+# @swag_from(
+#     {
+#         "tags": ["UserInfo"],
+#         "description": """
+#     此API用於拿取使用者頭貼，支援格式為 JPG, JPEG, PNG。
 
-    Input:
-    - `Authorization` header 必須包含 Bearer token 以進行身份驗證。
-    - user_id: 使用者的唯一ID，用來查找並返回對應的頭像。
-    """,
-        "parameters": [
-            {
-                "name": "Authorization",
-                "in": "header",
-                "required": True,
-                "description": "Bearer token for authorization",
-                "schema": {"type": "string", "example": "Bearer "},
-            },
+#     Input:
+#     - `Authorization` header 必須包含 Bearer token 以進行身份驗證。
+#     - user_id: 使用者的唯一ID，用來查找並返回對應的頭像。
+#     """,
+#         "parameters": [
+#             {
+#                 "name": "Authorization",
+#                 "in": "header",
+#                 "required": True,
+#                 "description": "Bearer token for authorization",
+#                 "schema": {"type": "string", "example": "Bearer "},
+#             },
             
-        ],
-        "responses": {
-            200: {
-                "description": "成功回傳使用者頭像",
-                "content": {"image/jpeg": {}, "image/png": {}, "image/jpg": {}},
-            },
-            403: {
-                "description": "禁止請求",
-                "content": {"application/json": {"example": {"error": "Forbidden"}}},
-            },
-            404: {
-                "description": "使用者或照片找不到",
-                "content": {
-                    "application/json": {"example": {"error": "User ID not found"}}
-                },
-            },
-            500: {
-                "description": "內部伺服器錯誤",
-                "content": {
-                    "application/json": {"example": {"error": "Internal Server Error"}}
-                },
-            },
-        },
-    }
-)
-def get_photo():
-    current_email = get_jwt_identity()
+#         ],
+#         "responses": {
+#             200: {
+#                 "description": "成功回傳使用者頭像",
+#                 "content": {"image/jpeg": {}, "image/png": {}, "image/jpg": {}},
+#             },
+#             403: {
+#                 "description": "禁止請求",
+#                 "content": {"application/json": {"example": {"error": "Forbidden"}}},
+#             },
+#             404: {
+#                 "description": "使用者或照片找不到",
+#                 "content": {
+#                     "application/json": {"example": {"error": "User ID not found"}}
+#                 },
+#             },
+#             500: {
+#                 "description": "內部伺服器錯誤",
+#                 "content": {
+#                     "application/json": {"example": {"error": "Internal Server Error"}}
+#                 },
+#             },
+#         },
+#     }
+# )
+# def get_photo():
+#     current_email = get_jwt_identity()
 
-    # 從資料庫中查詢使用者
-    user_id = User.get_user_by_email(current_email).id
-    if user_id is None:
-        return jsonify(message="使用者不存在"), 404
+#     # 從資料庫中查詢使用者
+#     user_id = User.get_user_by_email(current_email).id
+#     if user_id is None:
+#         return jsonify(message="使用者不存在"), 404
 
-    user_info = UserPhotoRepo.find_user_photo_by_user_id(user_id)
+#     user_info = UserPhotoRepo.find_user_photo_by_user_id(user_id)
 
-    # 如果使用者頭像是 null，則回傳預設圖片
-    photo_name = "avatar.png"
+#     # 如果使用者頭像是 null，則回傳預設圖片
+#     photo_name = "avatar.png"
 
-    if user_info:
-        photo_name =user_info.photoname
+#     if user_info:
+#         photo_name =user_info.photoname
 
-    # 傳回使用者的圖片檔案
-    return jsonify({"photo": f"{BASE_URL}/userinfo/images/{photo_name}"}), 200
+#     # 傳回使用者的圖片檔案
+#     return jsonify({"photo": f"{BASE_URL}/userinfo/images/{photo_name}"}), 200
 
 
-@userinfo_bp.get("/images/<photoname>")
-@jwt_required()
+@userinfo_bp.get("/images/<id>/<photoname>")
 @swag_from(
     {
         "tags": ["UserInfo"],
@@ -266,10 +265,7 @@ def get_photo():
         },
     }
 )
-def get_image(photoname):
-    current_email = get_jwt_identity()
-    id = User.get_user_by_email(current_email).id
-
+def get_image(id, photoname):
     if photoname == "avatar.png":
         file_path = os.path.join(FILE_DIRECTORY, "default", photoname)
     else:
