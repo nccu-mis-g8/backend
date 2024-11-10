@@ -45,7 +45,7 @@ def inference(model_dir: str, input_text: str, user_id: str) -> List[str] | None
                 df_sample = df
 
             for _, row in df_sample.iterrows():
-                chat.append({"rolse": "user", "content": row["input"]})
+                chat.append({"role": "user", "content": row["input"]})
                 chat.append({"role": "assistant", "content": row["output"]})
 
         chat.append({"role": "user", "content": f"{input_text}"})
