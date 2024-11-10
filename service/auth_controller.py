@@ -15,9 +15,12 @@ import logging
 import utils.mail_sender as mail_sender
 from repository.password_verification_repo import PasswordVerificationCodeRepo
 import pyotp
+from repository.userphoto_repo import UserPhotoRepo
 
 auth_bp = Blueprint("auth", __name__)
 logger = logging.getLogger(__name__)
+
+BASE_URL = "http://192.168.1.109:8080" # 這裡要改成主機的IP
 
 
 @auth_bp.post("/register")
@@ -290,6 +293,13 @@ def login():
         user = User.get_user_by_email(email=email)
         if user is None or not user.check_password(password):
             return jsonify(message="電子郵件或密碼錯誤"), 401
+        
+        user_info = UserPhotoRepo.find_user_photo_by_user_id(user.id)
+        # 如果使用者頭像是 null，則回傳預設圖片
+        photo_name = "avatar.png"
+
+        if user_info:
+            photo_name =user_info.photoname
 
         # 刪除之前的 refresh token
         RefreshToken.delete_revoked_tokens(user.id)
@@ -318,7 +328,8 @@ def login():
                 firstname=user.firstname,
                 email=user.email,
                 access_token=access_token, 
-                refresh_token=refresh_token
+                refresh_token=refresh_token,
+                photo=f"{BASE_URL}/userinfo/images/{user.id}/{photo_name}"
             ),
             200,
         )
