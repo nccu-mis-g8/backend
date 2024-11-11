@@ -595,6 +595,6 @@ def model_to_dict(model) -> Dict:
         "user_id": model.user_id,
         "modelname": model.modelname,
         "model_original_name": model.model_original_name,
-        "modelphoto": model.modelphoto,
+        "modelphoto": f"{BASE_URL}/userinfo/images/{model.id}/{model.modelphoto}",
         "anticipation": model.anticipation,
     }
