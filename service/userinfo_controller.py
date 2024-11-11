@@ -267,20 +267,18 @@ def upload_photo():
     }
 )
 def get_image(id, photoname):
-    if photoname == "avatar.png":
+    if photoname == "default":
         file_path = os.path.join(FILE_DIRECTORY, "default", photoname)
     else:
         file_path = os.path.join(FILE_DIRECTORY, str(id), photoname)
-    print(file_path)
+        
     if not os.path.exists(file_path):
-        # 如果檔案不存在，也回傳預設圖片
         default_image_path = os.path.join(FILE_DIRECTORY, "default", "avatar.png")
         if os.path.exists(default_image_path):
             return send_file(default_image_path, mimetype="image/png")
         else:
             return jsonify({"error": "User or photo not found"}), 404
 
-    # 傳回使用者的圖片檔案
     return send_file(file_path, mimetype=mimetypes.guess_type(file_path)[0])
 
 
