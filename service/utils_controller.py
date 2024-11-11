@@ -20,8 +20,9 @@ logger = logging.getLogger(__name__)
 
 
 FILE_DIRECTORY = "..\\training_file"
-# IP+port
-BASE_URL = "http://10.232.73.192:5000"
+
+# BASE_URL = "http://192.168.1.109:8080" # 安的IP
+BASE_URL = "https://nccu-group-8.work"   # 主機IP
 
 
 def allowed_file(filename, extension):
