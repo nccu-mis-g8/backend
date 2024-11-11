@@ -5,13 +5,15 @@ from sqlalchemy.exc import SQLAlchemyError
 
 class EventJournalRepository:
     @staticmethod
-    def create_event(user_id, event_title, event_content):
+    def create_event(user_id, event_title, event_content, event_date, event_picture):
         """新增一個事件記錄"""
         try:
             new_event = EventJournal(
                 user_id=user_id,
                 event_title=event_title,
-                event_content=event_content
+                event_content=event_content,
+                event_date=event_date,
+                event_picture=event_picture
             )
             db.session.add(new_event)
             db.session.commit()
@@ -40,7 +42,7 @@ class EventJournalRepository:
             raise e
 
     @staticmethod
-    def update_event(event_id, event_title=None, event_content=None, updated_at=None):
+    def update_event(event_id, event_title=None, event_content=None, updated_at=None, event_date=None ,event_picture=None):
         """更新一個事件的標題或內容"""
         try:
             event = EventJournal.query.filter_by(id=event_id).first()
@@ -52,6 +54,10 @@ class EventJournalRepository:
                 event.event_content = event_content
             if updated_at:
                 event.updated_at = updated_at
+            if event_date:
+                event.event_date = event_date
+            if event_picture:
+                event.event_picture = event_picture
             db.session.commit()
             return event
         except SQLAlchemyError as e:
