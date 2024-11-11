@@ -267,7 +267,7 @@ def upload_photo():
     }
 )
 def get_image(id, photoname):
-    if photoname == "default":
+    if id == "default":
         file_path = os.path.join(FILE_DIRECTORY, "default", photoname)
     else:
         file_path = os.path.join(FILE_DIRECTORY, str(id), photoname)
