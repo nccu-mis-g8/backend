@@ -294,12 +294,15 @@ def login():
         if user is None or not user.check_password(password):
             return jsonify(message="電子郵件或密碼錯誤"), 401
         
-        user_info = UserPhotoRepo.find_user_photo_by_user_id(user.id)
-        # 如果使用者頭像是 null，則回傳預設圖片
         photo_name = "avatar.png"
-
+        user_info = UserPhotoRepo.find_user_photo_by_user_id(user.id)
         if user_info:
             photo_name =user_info.photoname
+        
+        if photo_name == "avatar.png":
+            photo_path = f"{BASE_URL}/userinfo/images/default/{photo_name}"
+        else:
+            photo_path = f"{BASE_URL}/userinfo/images/{user.id}/{photo_name}"
 
         # 刪除之前的 refresh token
         RefreshToken.delete_revoked_tokens(user.id)
@@ -329,7 +332,7 @@ def login():
                 email=user.email,
                 access_token=access_token, 
                 refresh_token=refresh_token,
-                photo=f"{BASE_URL}/userinfo/images/{user.id}/{photo_name}"
+                photo=photo_path
             ),
             200,
         )
