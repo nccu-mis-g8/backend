@@ -1,17 +1,21 @@
 import logging
+
+from sqlalchemy import and_, extract
 from extensions import db
 from models.event_journal import EventJournal
 from sqlalchemy.exc import SQLAlchemyError
 
 class EventJournalRepository:
     @staticmethod
-    def create_event(user_id, event_title, event_content):
+    def create_event(user_id, event_title, event_content, event_date, event_picture):
         """新增一個事件記錄"""
         try:
             new_event = EventJournal(
                 user_id=user_id,
                 event_title=event_title,
-                event_content=event_content
+                event_content=event_content,
+                event_date=event_date,
+                event_picture=event_picture
             )
             db.session.add(new_event)
             db.session.commit()
@@ -40,7 +44,7 @@ class EventJournalRepository:
             raise e
 
     @staticmethod
-    def update_event(event_id, event_title=None, event_content=None, updated_at=None):
+    def update_event(event_id, event_title=None, event_content=None, updated_at=None, event_date=None ,event_picture=None):
         """更新一個事件的標題或內容"""
         try:
             event = EventJournal.query.filter_by(id=event_id).first()
@@ -52,6 +56,10 @@ class EventJournalRepository:
                 event.event_content = event_content
             if updated_at:
                 event.updated_at = updated_at
+            if event_date:
+                event.event_date = event_date
+            if event_picture:
+                event.event_picture = event_picture
             db.session.commit()
             return event
         except SQLAlchemyError as e:
@@ -72,4 +80,17 @@ class EventJournalRepository:
         except SQLAlchemyError as e:
             db.session.rollback()
             logging.error(f"Error deleting event with ID {event_id}: {e}")
+            raise e
+    @staticmethod
+    def get_events_by_date(user_id, target_year):
+        """根據使用者ID和日期取得事件"""
+        try:
+            return EventJournal.query.filter(
+                        and_(
+                            EventJournal.user_id == user_id,
+                            extract('year', EventJournal.event_date) == target_year
+                        )
+                    ).order_by(EventJournal.event_date.asc()).all()        
+        except SQLAlchemyError as e:
+            logging.error(f"Error retrieving event with user ID {user_id} and the year if {target_year}: {e}")
             raise e

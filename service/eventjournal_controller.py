@@ -5,6 +5,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from models.user import User
 from datetime import datetime, timezone
 from repository.event_journal_repo import EventJournalRepository
+from service.userinfo_controller import BASE_URL
 
 from utils import chroma
 
@@ -59,6 +60,17 @@ logger = logging.getLogger(__name__)
                             "type": "string",
                             "description": "事件的具體內容",
                             "example": "在家舉辦一個生日派對",
+                        },
+                        "event_date": {
+                            "type": "string",
+                            "format": "date",
+                            "description": "事件的日期",
+                            "example": "2023-12-25"
+                        },
+                        "event_picture": {
+                            "type": "string",
+                            "description": "事件的日期",
+                            "example": "event_picture1.jpg"
                         },
                     },
                     "required": ["event_title", "event_content"],
@@ -127,13 +139,15 @@ def create_event():
     # 驗證事件標題和內容是否為空
     event_title = data.get("event_title")
     event_content = data.get("event_content")
+    event_date = data.get("event_date")
+    event_picture = data.get("event_picture")
 
     if not event_title or not event_content:
         return jsonify({"msg": "標題和內容不能為空"}), 400
 
     try:
         # 創建新的事件
-        event = EventJournalRepository.create_event(user.id, event_title, event_content)
+        event = EventJournalRepository.create_event(user.id, event_title, event_content, event_date, event_picture)
 
         # 新增到向量資料庫
         collection_name = f"collection_{user.id}"
@@ -153,6 +167,7 @@ def create_event():
                     "event_id": event.id,
                     "created_at": event.created_at.isoformat(),
                     "updated_at": event.updated_at.isoformat(),
+                    "event_date": event.event_date.isoformat(),
                 }
             ),
             201,
@@ -163,7 +178,7 @@ def create_event():
         return jsonify({"msg": "創建事件時發生錯誤", "error": str(e)}), 500
 
 
-@event_bp.get("/getevents/<int:user_id>")
+@event_bp.get("/getevents")
 @jwt_required()
 @swag_from(
     {
@@ -183,14 +198,6 @@ def create_event():
       - 失敗時：返回錯誤消息及相應的 HTTP 狀態碼。
     """,
         "parameters": [
-            {
-                "name": "user_id",
-                "in": "path",
-                "required": True,
-                "type": "integer",
-                "description": "要查詢事件的使用者 ID",
-                "example": 1,
-            },
             {
                 "name": "Authorization",
                 "in": "header",
@@ -248,9 +255,10 @@ def create_event():
         },
     }
 )
-def get_events(user_id):
+def get_events():
     current_email = get_jwt_identity()
 
+    user_id = User.get_user_by_email(current_email).id
     # 確認使用者是否存在
     user_exists = User.is_user_id_exists(user_id)
     if not user_exists:
@@ -277,6 +285,8 @@ def get_events(user_id):
                 "event_content": event.event_content,
                 "created_at": event.created_at.isoformat(),
                 "updated_at": event.updated_at.isoformat(),
+                "event_date": event.event_date.isoformat(),
+                "event_picture": f'{BASE_URL}/userinfo/images/default/{event.event_picture}'
             }
             for event in events
         ]
@@ -400,6 +410,8 @@ def get_event(event_id):
             "event_content": event.event_content,
             "created_at": event.created_at.isoformat(),
             "updated_at": event.updated_at.isoformat(),
+            "event_date": event.event_date.isoformat(),
+            "event_picture": f'{BASE_URL}/userinfo/images/default/{event.event_picture}'
         }
 
         return jsonify(event_response), 200
@@ -452,6 +464,9 @@ def get_event(event_id):
                     "properties": {
                         "event_title": {"type": "string", "example": "更新的生日派對"},
                         "event_content": {"type": "string", "example": "這是一個更新的生日派對內容"},
+                        "event_date": {"type": "string", "example": "更新更新的時間"},
+                        "event_picture": {"type": "string", "example": "更新的照片"},
+
                     },
                     "required": ["event_title", "event_content"],
                 },
@@ -531,13 +546,15 @@ def update_event(event_id):
     data = request.get_json()
     event_title = data.get("event_title")
     event_content = data.get("event_content")
+    event_date = data.get("event_date")
+    event_picture = data.get("event_picture")
 
     updated_at = datetime.now(timezone.utc)
 
     try:
         # 將變更保存到資料庫
         updated_event = EventJournalRepository.update_event(
-            event.id, event_title, event_content, updated_at
+            event.id, event_title, event_content, updated_at, event_date, event_picture
         )
         collection_name = f"collection_{user.id}"
         collection = chroma.create_collection(collection_name)
@@ -555,6 +572,8 @@ def update_event(event_id):
             "event_content": updated_event.event_content,
             "created_at": updated_event.created_at.isoformat(),
             "updated_at": updated_event.updated_at.isoformat(),
+            "event_date": event.event_date.isoformat(),
+            "event_picture": f'{BASE_URL}/userinfo/images/default/{event.event_picture}'
         }
 
         return jsonify(updated_event_response), 200
@@ -659,3 +678,129 @@ def delete_event(event_id):
 
     except Exception as e:
         return jsonify(message="刪除事件時發生錯誤", error=str(e)), 500
+
+
+@event_bp.get("/getevents/<target_year>")
+@jwt_required()
+@swag_from(
+    {
+        "tags": ["EventJournal"],
+        "description": """
+    此 API 用於查詢特定使用者的所有事件列表。
+
+    Steps:
+    1. 驗證使用者身份。
+    2. 確認所查詢的使用者 ID 是否存在。
+    3. 從資料庫查詢與該使用者 ID 關聯的所有事件。
+    4. 返回事件列表，包括事件的標題、內容和創建時間。
+
+    Returns:
+    - JSON 回應訊息：
+      - 成功時：返回事件列表，包括每個事件的詳細資訊。
+      - 失敗時：返回錯誤消息及相應的 HTTP 狀態碼。
+    """,
+        "parameters": [
+            {
+                "name": "target_year",
+                "in": "path",
+                "required": True,
+                "description": "the target year to get events",
+                "schema": {"type": "string", "example": "2023 "},
+            },
+            {
+                "name": "Authorization",
+                "in": "header",
+                "required": True,
+                "description": "Bearer token for authorization",
+                "schema": {"type": "string", "example": "Bearer "},
+            },
+        ],
+        "responses": {
+            200: {
+                "description": "事件列表成功返回",
+                "schema": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "event_id": {"type": "integer", "example": 1},
+                            "event_title": {"type": "string", "example": "生日派對"},
+                            "event_content": {
+                                "type": "string",
+                                "example": "在家舉辦一個生日派對",
+                            },
+                            "created_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "example": "2024-10-08T10:00:00Z",
+                            },
+                            "updated_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "example": "2024-10-08T11:00:00Z",
+                            },
+                        },
+                    },
+                },
+            },
+            404: {
+                "description": "使用者不存在或未找到事件",
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "message": {"type": "string", "example": "使用者不存在或沒有事件"}
+                    },
+                },
+            },
+            500: {
+                "description": "伺服器內部錯誤",
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "message": {"type": "string", "example": "查詢事件時發生錯誤"}
+                    },
+                },
+            },
+        },
+    }
+)
+def get_events_by_year(target_year):
+    current_email = get_jwt_identity()
+
+    # 只查詢一次使用者
+    user = User.get_user_by_email(current_email)
+    if user is None:
+        return jsonify(message="使用者不存在"), 404
+
+    try:
+        # 確保 target_year 是一個有效的整數
+        try:
+            target_year = int(target_year)
+        except ValueError:
+            return jsonify(message="請提供有效的年份格式"), 400
+
+        # 查詢與該使用者 ID 關聯的所有事件
+        events = EventJournalRepository.get_events_by_date(user.id, target_year)
+
+        # 檢查是否有事件
+        if not events:
+            return jsonify(message="沒有事件存在"), 404
+
+        # 構建事件列表的回應
+        event_list = [
+            {
+                "event_id": event.id,
+                "event_title": event.event_title,
+                "event_content": event.event_content,
+                "created_at": event.created_at.isoformat(),
+                "updated_at": event.updated_at.isoformat(),
+                "event_date": event.event_date.isoformat(),
+                "event_picture": f'{BASE_URL}/userinfo/images/default/{event.event_picture}'
+            }
+            for event in events
+        ]
+
+        return jsonify(event_list), 200
+
+    except Exception as e:
+        return jsonify(message="查詢事件時發生錯誤", error=str(e)), 500
