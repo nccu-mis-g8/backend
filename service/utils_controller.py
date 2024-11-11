@@ -12,6 +12,8 @@ import json
 import os
 import logging
 import utils.linetxt_to_llama as linetxt_to_llama
+from typing import Dict
+from sqlalchemy.exc import SQLAlchemyError
 
 utils_bp = Blueprint("utils", __name__)
 logger = logging.getLogger(__name__)
@@ -498,3 +500,100 @@ def get_model_status(model_Id):
         ),
         200,
     )
+
+
+@utils_bp.get("/user/all_model_info")
+@jwt_required()
+@swag_from({
+    'tags': ['Utils'],
+    'description': '拿到指定使用者的所有模型資訊',
+    'parameters': [
+        {
+            'name': 'Authorization',
+            'in': 'header',
+            'type': 'string',
+            'required': True,
+            'description': 'JWT token to authenticate the request.',
+            "schema": {"type": "string", "example": "Bearer "},
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Successfully retrieved all model information',
+            'content': {
+                'application/json': {
+                    'example': [
+                        {
+                            "id": 1,
+                            "user_id": 5,
+                            "modelname": "d8ff0712-1ffb-4122-aa01-25b0439ee8c9",
+                            "model_original_name": "子安",
+                            "modelphoto": "avatar.png",
+                            "anticipation": "帥氣的人"
+                        },
+                        {
+                            "id": 2,
+                            "user_id": 5,
+                            "modelname": "9c7c9123-2abc-5678-dcba-34f0123fe8b7",
+                            "model_original_name": "致愷",
+                            "modelphoto": "avatar2.png",
+                            "anticipation": "傻子"
+                        }
+                    ]
+                }
+            }
+        },
+        404: {
+            'description': 'User does not exist',
+            'content': {
+                'application/json': {
+                    'example': {
+                        'message': '使用者不存在'
+                    }
+                }
+            }
+        },
+        500: {
+            'description': 'Database error',
+            'content': {
+                'application/json': {
+                    'example': {
+                        'message': '資料庫錯誤，請稍後再試'
+                    }
+                }
+            }
+        }
+    }
+})
+def get_all_model_info():
+    current_email = get_jwt_identity()
+    user = User.get_user_by_email(current_email)
+    
+    if user is None:
+        return jsonify(message="使用者不存在"), 404
+
+    try:
+        models = TrainedModelRepo.find_all_trainedmodel_by_user_id(user.id)
+    except SQLAlchemyError:
+        return jsonify(message="資料庫錯誤，請稍後再試"), 500
+
+    # Convert to list of dictionaries
+    model_data = [model_to_dict(model) for model in models]
+    
+    if not model_data:
+        # If no models are found, return an empty message
+        return jsonify(message="此使用者沒有任何訓練的模型"), 200
+
+    return jsonify(model_data)
+    
+
+
+def model_to_dict(model) -> Dict:
+    return {
+        "id": model.id,
+        "user_id": model.user_id,
+        "modelname": model.modelname,
+        "model_original_name": model.model_original_name,
+        "modelphoto": model.modelphoto,
+        "anticipation": model.anticipation,
+    }
