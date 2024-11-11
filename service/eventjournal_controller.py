@@ -5,12 +5,13 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from models.user import User
 from datetime import datetime, timezone
 from repository.event_journal_repo import EventJournalRepository
-from service.userinfo_controller import BASE_URL
-
 from utils import chroma
 
 event_bp = Blueprint("event", __name__)
 logger = logging.getLogger(__name__)
+
+# BASE_URL = "http://192.168.1.109:8080" # 安的IP
+BASE_URL = "https://nccu-group-8.work"   # 主機IP
 
 
 @event_bp.post("/create_event")
