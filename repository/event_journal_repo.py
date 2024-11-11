@@ -1,4 +1,6 @@
 import logging
+
+from sqlalchemy import and_, extract
 from extensions import db
 from models.event_journal import EventJournal
 from sqlalchemy.exc import SQLAlchemyError
@@ -78,4 +80,17 @@ class EventJournalRepository:
         except SQLAlchemyError as e:
             db.session.rollback()
             logging.error(f"Error deleting event with ID {event_id}: {e}")
+            raise e
+    @staticmethod
+    def get_events_by_date(user_id, target_year):
+        """根據使用者ID和日期取得事件"""
+        try:
+            return EventJournal.query.filter(
+                        and_(
+                            EventJournal.user_id == user_id,
+                            extract('year', EventJournal.event_date) == target_year
+                        )
+                    ).order_by(EventJournal.event_date.asc()).all()        
+        except SQLAlchemyError as e:
+            logging.error(f"Error retrieving event with user ID {user_id} and the year if {target_year}: {e}")
             raise e
