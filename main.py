@@ -1,4 +1,5 @@
 from flask import Flask
+from flask_cors import CORS
 from extensions import db, jwt
 from service.auth_controller import auth_bp
 from service.utils_controller import utils_bp
@@ -33,6 +34,7 @@ app.config["SWAGGER"] = {
 }
 
 # initialize
+CORS(app, resources={r"/*": {"origins": ["http://localhost:3000", "http://127.0.0.1:7664", "http://127.0.0.1:5000"]}})
 db.init_app(app)
 jwt.init_app(app)
 
