@@ -52,6 +52,18 @@ class TrainingFileRepo:
         except Exception as e:
             db.session.rollback()
             logging.error(f"Error delete training_file for file {file_id}: {e}")
+            
+    @staticmethod
+    def delete_training_file_by_user_and_model_id(user_id: int, model_id: int) -> bool:
+        try:
+            TrainingFile.query.filter_by(user_id=user_id, id=model_id).delete()
+            db.session.commit()
+            return True
+        except Exception as e:
+            db.session.rollback()
+            logging.error(f"Error deleting training files for model {model_id}: {e}")
+            return False
+
 
     @staticmethod
     def save_training_file():
