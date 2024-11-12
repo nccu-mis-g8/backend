@@ -8,6 +8,7 @@ import json
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from repository.trainedmodel_repo import TrainedModelRepo
+from repository.trainingfile_repo import TrainingFileRepo
 from repository.userphoto_repo import UserPhotoRepo
 from models.user import User
 
@@ -15,6 +16,7 @@ userinfo_bp = Blueprint("userinfo", __name__)
 logger = logging.getLogger(__name__)
 
 FILE_DIRECTORY = os.path.abspath("..\\user_photo_file")
+TRAINING_FILE_DIRECTORY = os.path.abspath("..\\training_file")
 # BASE_URL = "http://192.168.1.109:8080" # 安的IP
 BASE_URL = "https://nccu-group-8.work"   # 主機IP
 
