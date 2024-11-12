@@ -507,17 +507,6 @@ def delete_model(model_id):
     if model is None:
         return jsonify({"error": "Model not found or does not belong to the user"}), 404
     try:
-        # 刪除模型照片
-        photo_folder = os.path.join(FILE_DIRECTORY, str(user_id))
-        file_path = os.path.join(photo_folder, model.modelphoto)
-        if os.path.exists(file_path):
-            os.remove(file_path)
-
-        # 刪除資料庫中的模型記錄
-        delete_model_success = TrainedModelRepo.delete_trainedmodel_by_user_and_model_id(user_id=user_id, model_id=model_id)
-
-        if not delete_model_success:
-            return jsonify({"error": "Unable to delete model from database"}), 500
         
         # 刪除該模型的所有訓練檔案
         model_training_file = TrainingFileRepo.find_first_training_file_by_user_and_model_id(user_id, model_id)
@@ -525,7 +514,19 @@ def delete_model(model_id):
             file_path = os.path.join(TRAINING_FILE_DIRECTORY, model_training_file.filename)
             if os.path.exists(file_path):
                 os.remove(file_path)
-                TrainingFileRepo.delete_training_file_by_user_and_model_id(user_id=user_id, model_id=model_id)
+        TrainingFileRepo.delete_training_file_by_user_and_model_id(user_id=user_id, model_id=model_id)
+        
+        # 刪除資料庫中的模型記錄
+        delete_model_success = TrainedModelRepo.delete_trainedmodel_by_user_and_model_id(user_id=user_id, model_id=model_id)
+
+        if not delete_model_success:
+            return jsonify({"error": "Unable to delete model from database"}), 500
+        
+        # 刪除模型照片
+        photo_folder = os.path.join(FILE_DIRECTORY, str(user_id))
+        file_path = os.path.join(photo_folder, model.modelphoto)
+        if os.path.exists(file_path):
+            os.remove(file_path)
                 
     except Exception as e:
         print(f"Error deleting model or related files: {e}")
