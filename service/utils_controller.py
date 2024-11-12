@@ -495,7 +495,7 @@ def get_model_status(model_Id):
                 ),
                 "model_id": trained_model_status.id,
                 "model_name": trained_model_status.modelname,
-                "model_photo": f"{BASE_URL}/userinfo/images/{photo_path}",
+                "model_photo": f"{BASE_URL}/userinfo/images/{training_file_status.user_id}/{photo_path}",
                 "model_anticipation": trained_model_status.anticipation,
             }
         ),
