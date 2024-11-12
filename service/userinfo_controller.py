@@ -514,7 +514,10 @@ def delete_model(model_id):
             file_path = os.path.join(TRAINING_FILE_DIRECTORY, model_training_file.filename)
             if os.path.exists(file_path):
                 os.remove(file_path)
-        TrainingFileRepo.delete_training_file_by_user_and_model_id(user_id=user_id, model_id=model_id)
+        delete_trainingfile_success = TrainingFileRepo.delete_training_file_by_user_and_model_id(user_id=user_id, model_id=model_id)
+        
+        if not delete_trainingfile_success:
+            return jsonify({"error": "Unable to delete training files from database"}), 500
         
         # 刪除資料庫中的模型記錄
         delete_model_success = TrainedModelRepo.delete_trainedmodel_by_user_and_model_id(user_id=user_id, model_id=model_id)
