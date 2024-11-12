@@ -430,3 +430,106 @@ def create_model():
                 ),
                 400,
             )
+            
+            
+@userinfo_bp.delete("/user/delete_model/<int:model_id>")
+@jwt_required()
+@swag_from({
+    'tags': ['UserInfo'],
+    'description': 'Delete a user’s model and all associated files based on the model ID.',
+    'parameters': [
+        {
+            "name": "Authorization",
+            "in": "header",
+            "required": True,
+            "description": "Bearer token for authorization",
+            "schema": {"type": "string", "example": "Bearer "},
+        },
+        {
+            'name': 'model_id',
+            'in': 'path',
+            'type': 'integer',
+            'required': True,
+            'description': 'ID of the model to be deleted',
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Model and related files deleted successfully',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'message': {
+                        'type': 'string',
+                        'example': 'Model deleted successfully'
+                    }
+                }
+            }
+        },
+        404: {
+            'description': 'User ID or model not found, or model does not belong to the user',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'error': {
+                        'type': 'string',
+                        'example': 'User ID not found'
+                    }
+                }
+            }
+        },
+        500: {
+            'description': 'Internal server error during deletion',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'error': {
+                        'type': 'string',
+                        'example': 'An error occurred while deleting the model'
+                    }
+                }
+            }
+        }
+    }
+})
+def delete_model(model_id):
+    current_email = get_jwt_identity()
+    user_id = User.get_user_by_email(current_email).id
+
+    # 檢查使用者是否存在
+    if user_id is None:
+        return jsonify({"error": "User ID not found"}), 404
+
+    # 從資料庫中取得指定 model_id 的模型
+    model = TrainedModelRepo.find_trainedmodel_by_user_and_model_id(user_id=user_id, model_id=model_id)
+
+    # 檢查模型是否存在
+    if model is None:
+        return jsonify({"error": "Model not found or does not belong to the user"}), 404
+    try:
+        # 刪除模型照片
+        photo_folder = os.path.join(FILE_DIRECTORY, str(user_id))
+        file_path = os.path.join(photo_folder, model.modelphoto)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+        # 刪除資料庫中的模型記錄
+        delete_model_success = TrainedModelRepo.delete_trainedmodel_by_user_and_model_id(user_id=user_id, model_id=model_id)
+
+        if not delete_model_success:
+            return jsonify({"error": "Unable to delete model from database"}), 500
+        
+        # 刪除該模型的所有訓練檔案
+        model_training_file = TrainingFileRepo.find_first_training_file_by_user_and_model_id(user_id, model_id)
+        if model_training_file:
+            file_path = os.path.join(TRAINING_FILE_DIRECTORY, model_training_file.filename)
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                TrainingFileRepo.delete_training_file_by_user_and_model_id(user_id=user_id, model_id=model_id)
+                
+    except Exception as e:
+        print(f"Error deleting model or related files: {e}")
+        return jsonify({"error": "An error occurred while deleting the model"}), 500
+
+    return jsonify({"message": "Model deleted successfully"}), 200
+
