@@ -291,6 +291,56 @@ def chat():
 
 @train_model_bp.post("/share-model")
 @jwt_required()
+@swag_from({
+    "tags": ["Model Sharing"],
+    "description": "Share a trained model.",
+    "parameters": [
+        {
+            "name": "Authorization",
+            "in": "header",
+            "required": True,
+            "description": "Bearer token for authorization",
+            "schema": {"type": "string", "example": "Bearer "},
+        },
+        {
+            "name": "modelname",
+            "in": "formData",
+            "type": "string",
+            "required": True,
+            "description": "The name of the trained model to be shared"
+        }
+    ],
+    "responses": {
+        "200": {
+            "description": "Model successfully shared",
+            "examples": {
+                "application/json": {
+                    "msg": "成功建立模型分享",
+                    "modelname": "example_model_name",
+                    "link": "uuid"
+                }
+            }
+        },
+        "404": {
+            "description": "User or model not found",
+            "examples": {
+                "application/json": {"message": "使用者不存在"}
+            }
+        },
+        "403": {
+            "description": "Forbidden - Model does not belong to the user",
+            "examples": {
+                "application/json": {"message": "無法取用該模型"}
+            }
+        },
+        "500": {
+            "description": "Failed to create shared model",
+            "examples": {
+                "application/json": {"message": "無法建立模型分享"}
+            }
+        }
+    }
+})
 def share_model():
     current_email = get_jwt_identity()
 
