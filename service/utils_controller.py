@@ -495,15 +495,13 @@ def get_model_status(model_Id):
                 ),
                 "model_id": trained_model_status.id,
                 "model_name": trained_model_status.modelname,
-                "model_start_time": trained_model_status.start_time.strftime(
+                "model_start_time": (
                     trained_model_status.start_time.strftime("%Y-%m-%d %H:%M:%S")
-                    if trained_model_status.start_time is not None
-                    else "N/A"
+                    if trained_model_status.start_time is not None else "N/A"
                 ),
-                "model_end_time": trained_model_status.end_time.strftime(
+                "model_end_time": (
                     trained_model_status.end_time.strftime("%Y-%m-%d %H:%M:%S")
-                    if trained_model_status.end_time is not None
-                    else "N/A"
+                    if trained_model_status.end_time is not None else "N/A"
                 ),
                 "model_photo": f"{BASE_URL}/userinfo/images/{training_file_status.user_id}/{photo_path}",
                 "model_anticipation": trained_model_status.anticipation,
