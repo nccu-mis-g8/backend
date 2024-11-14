@@ -259,7 +259,7 @@ def chat():
         return jsonify({"error": "Forbidden"}), 403
 
     is_shared = request.form.get("is_shared")
-    if not is_shared:
+    if is_shared is None:
         return jsonify({"error": "is_shared is required"}), 400
     modelname = request.form.get("modelname")
     if not modelname:
