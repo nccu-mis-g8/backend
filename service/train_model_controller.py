@@ -357,7 +357,7 @@ def share_model():
     if model.user_id != user.id:
         return jsonify(message="無法取用該模型"), 403
     shared_model = SharedModelRepo.create_shared_model(model)
-    if share_model is None:
+    if shared_model is None:
         return jsonify(message="無法建立模型分享"), 500
     return (
         jsonify(
