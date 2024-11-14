@@ -588,6 +588,9 @@ def get_all_model_info():
             return jsonify(message="此使用者沒有任何訓練的模型"), 200
         
         sharedmodel = SharedModelRepo.find_sharedmodel_by_acquirer_id(user.id)
+        
+        if sharedmodel is not None:
+            shared_trained_model = TrainedModelRepo.find_trainedmodel_by_model_id(sharedmodel.model_id) 
     except SQLAlchemyError:
         return jsonify(message="資料庫錯誤，請稍後再試"), 500
 
@@ -596,10 +599,12 @@ def get_all_model_info():
     
     if sharedmodel is not None:
         shared_model_data  = {
-            "sharedmodel_id": sharedmodel.id,
-            "user_id": sharedmodel.acquirer_id,
-            "model_id": sharedmodel.model_id,
-            "link": sharedmodel.link
+            "owner_id": shared_trained_model.user_id,
+            "owner_model_id": shared_trained_model.id,
+            "owner_modelname": shared_trained_model.modelname,
+            "owner_model_original_name": shared_trained_model.model_original_name,
+            "owner_model_anticipation": shared_trained_model.anticipation,
+            "owner_model_photo": f"{BASE_URL}/userinfo/images/{shared_trained_model.user_id}/{shared_trained_model.modelphoto}",
         }
         
         trained_model_data.append(shared_model_data)
