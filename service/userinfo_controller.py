@@ -508,7 +508,7 @@ def delete_model(model_id):
         return jsonify({"error": "Model not found or does not belong to the user"}), 404
     try:
         
-        # 刪除該模型的所有訓練檔案
+        # 刪除該模型的訓練檔案
         model_training_file = TrainingFileRepo.find_first_training_file_by_user_and_model_id(user_id, model_id)
         if model_training_file:
             file_path = os.path.join(TRAINING_FILE_DIRECTORY, model_training_file.filename)
