@@ -27,15 +27,24 @@ class SharedModelRepo:
     @staticmethod
     def obtain_shared_model(link, acquirer_id) -> Dict:
         res = {"res": False, "msg": ""}
+        
         model: Optional[SharedModel] = SharedModel.query.filter_by(link=link).first()
         if model is None:
             res["msg"] = "找不到模型"
             return res
-        # if model 被取走了
+        
         if model.acquirer_id is not None:
-            res["msg"] = "連結己被使用"
+            res["msg"] = "連結已被使用"
             return res
-        res["res"] = True
-        res["msg"] = "成功取得模型"
-        model.acquirer_id = acquirer_id
+        
+        try:
+            model.acquirer_id = acquirer_id
+            db.session.commit()
+            res["res"] = True
+            res["msg"] = "成功取得模型權限"
+        except Exception as e:
+            db.session.rollback()
+            res["msg"] = f"資料庫錯誤: {e}"
+        
         return res
+
