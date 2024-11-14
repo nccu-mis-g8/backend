@@ -1,3 +1,5 @@
+from typing import Optional
+from accelerate.state import SharedDict
 from flask import Blueprint, request, Response, jsonify
 from flasgger import swag_from
 import logging
@@ -189,6 +191,20 @@ def train_model():
                 "schema": {"type": "string", "example": "Bearer "},
             },
             {
+                "name": "is_shared",
+                "in": "formData",
+                "type": "bool",
+                "description": "是不是分享來的 model",
+                "required": True,
+            },
+            {
+                "name": "modelname",
+                "in": "formData",
+                "type": "string",
+                "description": "選擇要聊天的 modelname（注意：不是 model_id，是 modelname）",
+                "required": True,
+            },
+            {
                 "name": "user_info",
                 "in": "formData",
                 "type": "string",
@@ -243,17 +259,25 @@ def chat():
     else:
         return jsonify({"error": "Forbidden"}), 403
 
-    model_id = request.form.get("model_id")
-    if not model_id:
-        return jsonify({"error": "model_id is required"}), 400
-
-    trained_model = TrainedModelRepo.find_trainedmodel_by_user_and_model_id(
-        user_id=user_id, model_id=model_id
-    )
-
+    is_shared = request.form.get("is_shared")
+    if not is_shared:
+        return jsonify({"error": "is_shared is required"}), 400
+    modelname = request.form.get("modelname")
+    if not modelname:
+        return jsonify({"error": "modelname is required"}), 400
+    # 取得模型
+    trained_model: Optional[TrainedModel] = None
+    if is_shared:
+        trained_model = SharedModelRepo.find_trainedmodel_by_modelname_and_acquirer_id(
+            modelname=modelname, acquirer_id=user_id
+        )
+    else:
+        trained_model = TrainedModelRepo.find_trainedmodel_by_user_and_modelname(
+            user_id=user_id, modelname=modelname
+        )
     if trained_model is None:
         return jsonify({"error": "Model not found"}), 404
-    # print(user_id)
+
     model_dir = os.path.abspath(
         os.path.join("..", "saved_models", trained_model.modelname)
     )

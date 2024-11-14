@@ -3,12 +3,14 @@ from typing import Dict, Optional
 from models.shared_model import SharedModel
 from extensions import db
 from models.trained_model import TrainedModel
+from sqlalchemy.orm import joinedload
 
 
 class SharedModelRepo:
     @staticmethod
     def create_shared_model(model: TrainedModel) -> Optional[SharedModel]:
         result = SharedModel(model.id)
+        db.session.add(result)
         res = SharedModelRepo.save()
         if res:
             return result
@@ -24,6 +26,20 @@ class SharedModelRepo:
             return False
 
     @staticmethod
+    def find_trainedmodel_by_modelname_and_acquirer_id(
+        modelname, acquirer_id
+    ) -> Optional[TrainedModel]:
+        return (
+            db.session.query(TrainedModel)
+            .join(SharedModel, SharedModel.model_id == TrainedModel.id)
+            .filter(
+                TrainedModel.modelname == modelname,
+                SharedModel.acquirer_id == acquirer_id,
+            )
+            .first()
+        )
+
+    @staticmethod
     def obtain_shared_model(link, acquirer_id) -> Dict:
         res = {"res": False, "msg": ""}
         model: Optional[SharedModel] = SharedModel.query.filter_by(link=link).first()
@@ -34,7 +50,11 @@ class SharedModelRepo:
         if model.acquirer_id is not None:
             res["msg"] = "連結己被使用"
             return res
-        res["res"] = True
-        res["msg"] = "成功取得模型"
+
         model.acquirer_id = acquirer_id
+        if SharedModelRepo.save():
+            res["res"] = True
+            res["msg"] = "成功取得模型"
+        else:
+            res["msg"] = "Failed to update acquirer_id"
         return res

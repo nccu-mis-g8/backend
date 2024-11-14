@@ -6,8 +6,8 @@ import uuid
 
 class TrainedModel(db.Model):
     __tablename__ = "trained_model"
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    id: int = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id: int = db.Column(db.Integer, db.ForeignKey("user.id"))
     modelname: str = db.Column(db.String(50), nullable=False)
     model_original_name: str = db.Column(db.String(255), nullable=True)
     modelphoto: str = db.Column(db.String(255), nullable=True)

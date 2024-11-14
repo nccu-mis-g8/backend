@@ -5,12 +5,14 @@ import uuid
 
 class SharedModel(db.Model):
     __tablename__ = "shared_model"
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    id: int = db.Column(db.Integer, primary_key=True, autoincrement=True)
     create_date: DateTime = db.Column(
         DateTime(timezone=True), nullable=False, default=func.now()
     )
     # 模型
-    model_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    model_id: int = db.Column(
+        db.Integer, db.ForeignKey("trained_model.id"), nullable=False
+    )
     # 取走模型的人（一個link只能用一次）
     acquirer_id = db.Column(
         db.Integer, db.ForeignKey("trained_model.id"), nullable=True
