@@ -47,4 +47,7 @@ class SharedModelRepo:
             res["msg"] = f"資料庫錯誤: {e}"
         
         return res
-
+    
+    staticmethod
+    def find_sharedmodel_by_acquirer_id(user_id: int) -> SharedModel | None:
+        return SharedModel.query.filter_by(acquirer_id=user_id).first()
