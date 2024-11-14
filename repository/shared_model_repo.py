@@ -9,6 +9,7 @@ class SharedModelRepo:
     @staticmethod
     def create_shared_model(model: TrainedModel) -> Optional[SharedModel]:
         result = SharedModel(model.id)
+        db.session.add(result)
         res = SharedModelRepo.save()
         if res:
             return result
