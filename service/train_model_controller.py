@@ -276,7 +276,7 @@ def chat():
             user_id=user_id, modelname=modelname
         )
     if trained_model is None:
-        return jsonify({"error": "Model not found"}), 404
+        return jsonify({"error": "未找到模型，請確認有模型訪問權限"}), 404
 
     model_dir = os.path.abspath(
         os.path.join("..", "saved_models", trained_model.modelname)
