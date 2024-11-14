@@ -417,6 +417,6 @@ def get_shared_model(link: str):
     res = SharedModelRepo.obtain_shared_model(link, user.id)
     # 成功
     if res["res"]:
-        return jsonify(message="成功取得模型權限"), 200
+        return jsonify(message=res["msg"]), 200
     # 失敗
     return jsonify(message=res["msg"]), 404
