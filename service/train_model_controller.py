@@ -1,5 +1,4 @@
 from typing import Optional
-from accelerate.state import SharedDict
 from flask import Blueprint, request, Response, jsonify
 from flasgger import swag_from
 import logging
