@@ -369,6 +369,44 @@ def share_model():
 
 @train_model_bp.route("/model/<string:link>", methods=["GET"])
 @jwt_required()
+@swag_from({
+    "tags": ["Model Sharing"],
+    "description": "Retrieve access to a shared model.",
+    "parameters": [
+        {
+            "name": "Authorization",
+            "in": "header",
+            "type": "string",
+            "required": True,
+            "schema": {"type": "string", "example": "Bearer "},
+        },
+        {
+            "name": "link",
+            "in": "path",
+            "type": "string",
+            "required": True,
+            "description": "Unique link identifier for the shared model"
+        }
+    ],
+    "responses": {
+        "200": {
+            "description": "Successfully retrieved model access",
+            "examples": {
+                "application/json": {
+                    "message": "成功取得模型權限"
+                }
+            }
+        },
+        "404": {
+            "description": "User or shared model not found, or user does not have access",
+            "examples": {
+                "application/json": {
+                    "message": "使用者不存在"
+                }
+            }
+        }
+    }
+})
 def get_shared_model(link: str):
     current_email = get_jwt_identity()
 
