@@ -55,6 +55,10 @@ class TrainedModelRepo:
         return TrainedModel.query.filter_by(user_id=user_id).first()
 
     @staticmethod
+    def find_trainedmodel_by_model_id(model_id: int) -> TrainedModel | None:
+        return TrainedModel.query.filter_by(id=model_id).first()
+
+    @staticmethod
     def find_trainedmodel_by_user_and_model_id(
         user_id, model_id
     ) -> TrainedModel | None:
@@ -76,4 +80,6 @@ class TrainedModelRepo:
             db.session.commit()
             return True
         return False
+    
+    
 
