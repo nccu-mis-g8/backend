@@ -259,21 +259,20 @@ def chat():
         return jsonify({"error": "Forbidden"}), 403
 
     is_shared = request.form.get("is_shared")
-    if is_shared is None:
-        return jsonify({"error": "is_shared is required"}), 400
     modelname = request.form.get("modelname")
     if not modelname:
         return jsonify({"error": "modelname is required"}), 400
     # 取得模型
     trained_model: Optional[TrainedModel] = None
-    if is_shared:
-        trained_model = SharedModelRepo.find_trainedmodel_by_modelname_and_acquirer_id(
-            modelname=modelname, acquirer_id=user_id
-        )
-    else:
+    if is_shared == "false":
         trained_model = TrainedModelRepo.find_trainedmodel_by_user_and_modelname(
             user_id=user_id, modelname=modelname
         )
+    else:
+        trained_model = SharedModelRepo.find_trainedmodel_by_modelname_and_acquirer_id(
+            modelname=modelname, acquirer_id=user_id
+        )
+
     if trained_model is None:
         return jsonify({"error": "未找到模型，請確認有模型訪問權限"}), 404
 
