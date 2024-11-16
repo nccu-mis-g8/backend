@@ -204,13 +204,6 @@ def train_model():
                 "required": True,
             },
             {
-                "name": "user_info",
-                "in": "formData",
-                "type": "string",
-                "description": "使用者的訊息，包括 user_Id",
-                "required": True,
-            },
-            {
                 "name": "input_text",
                 "in": "formData",
                 "type": "string",
