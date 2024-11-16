@@ -127,7 +127,7 @@ def train_model():
         model_path = os.path.join("..\\saved_models", trained_model.modelname)
         print(model_path)
         # 如果是第一次训练
-        if len(saved_models) == 0 or trained_model.id == model_id:
+        if len(saved_models) == 0 or str(trained_model.id) == model_id:
             print("第一次訓練")
             train(
                 str(trained_model.id),
@@ -192,7 +192,7 @@ def train_model():
             {
                 "name": "is_shared",
                 "in": "formData",
-                "type": "bool",
+                "type": "string",
                 "description": "是不是分享來的 model",
                 "required": True,
             },
