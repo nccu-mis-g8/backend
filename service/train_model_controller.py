@@ -245,11 +245,7 @@ def chat():
     if user is None:
         return jsonify(message="使用者不存在"), 404
 
-    user_id = request.form.get("user_id")
-    if user_id:
-        user_id = json.loads(user_id)
-    else:
-        return jsonify({"error": "Forbidden"}), 403
+    user_id = user.id
 
     is_shared = request.form.get("is_shared")
     modelname = request.form.get("modelname")

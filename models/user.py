@@ -40,7 +40,7 @@ class User(db.Model):
         - User 實例，如果找到；否則返回 None。
         """
         return cls.query.filter_by(email=email).first()
-    
+
     @classmethod
     def is_user_id_exists(cls, user_id):
         """
@@ -86,7 +86,9 @@ class RefreshToken(db.Model):
     __tablename__ = "refreshTokens"
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(
+        db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"), nullable=False
+    )
     token = db.Column(db.Text, nullable=False)
     revoked = db.Column(db.Boolean, default=False)
 
