@@ -11,7 +11,6 @@ from typing import List
 model_cache = {}
 
 def load_model_for_user(model_dir: str, user_id: str):
-    """為特定用戶加載模型並緩存"""
     if user_id in model_cache:
         print(f"Using cached model for user_id: {user_id}")
         return model_cache[user_id]
@@ -29,10 +28,8 @@ def load_model_for_user(model_dir: str, user_id: str):
 
 def inference(model_dir: str, input_text: str, user_id: str) -> List[str] | None:
     try:
-        # 加載模型和 Tokenizer
         model, tokenizer = load_model_for_user(model_dir, user_id)
 
-        # 獲取用戶歷史記錄
         chat = []
         user_history = TrainingFileRepo.find_trainingfile_by_user_id(user_id=user_id)
         if isinstance(user_history, list) and user_history:
@@ -62,10 +59,9 @@ def inference(model_dir: str, input_text: str, user_id: str) -> List[str] | None
             return_tensors="pt",
             padding=True,
             truncation=True,
-            max_length=256  # 增加一些上下文長度限制
+            max_length=256 
         ).to(model.device)
 
-        # 生成回應
         outputs = model.generate(
             input_ids=inputs["input_ids"],
             attention_mask=inputs["attention_mask"],
@@ -73,13 +69,14 @@ def inference(model_dir: str, input_text: str, user_id: str) -> List[str] | None
             max_length=128,
             top_k=30,
             top_p=0.85,
-            temperature=0.7,
+            temperature=0.8,
             num_return_sequences=1
         )
 
         generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True).strip()
 
-        tags_to_remove = ["INSTP", "[/INST]", "INST","[User]","User","[Assistant]","Assistant"]
+        #移除亂生成的標籤
+        tags_to_remove = ["INSTP", "[/INST]", "INST","[User]","User","[Assistant]","Assistant","\n:", ":","[你]","[我]","回答"]
         for tag in tags_to_remove:
             generated_text = generated_text.replace(tag, "").strip()
 
