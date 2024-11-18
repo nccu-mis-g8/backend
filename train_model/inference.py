@@ -83,8 +83,10 @@ def inference(model_dir: str, input_text: str, user_id: str) -> List[str] | None
         for tag in tags_to_remove:
             generated_text = generated_text.replace(tag, "").strip()
 
-        if "Assistant:" in generated_text:
-            generated_text = generated_text.split("Assistant:")[-1].strip()
+        if input_text in generated_text:
+            generated_text = generated_text.replace(input_text, "").strip()
+
+        generated_text = "\n".join(line for line in generated_text.splitlines() if line.strip())
 
         return [generated_text]
 
