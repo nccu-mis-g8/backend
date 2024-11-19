@@ -153,10 +153,10 @@ def create_event():
         # 新增到向量資料庫
         collection_name = f"collection_{user.id}"
         collection = chroma.create_collection(collection_name)
-        metadata = {"user_id": user.id, "event_title": event_title}
+        metadata = {"user_id": user.id, "event_title": event_title, "event_date": event_date}
         chroma.add_document(
             collection=collection,
-            document=f"{event_title}是{event_content}",
+            document=f"{event_date}:{event_title}是{event_content}",
             id=str(event.id),
             metadata=metadata,
         )
@@ -563,7 +563,7 @@ def update_event(event_id):
         chroma.update_document(
             collection=collection,
             id=str(event.id),
-            document=f"{event_title}是{event_content}",
+            document=f"{event_date}:{event_title}是{event_content}",
             metadata=metadata,
         )
         # 構建回應
