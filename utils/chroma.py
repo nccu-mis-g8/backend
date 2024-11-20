@@ -55,8 +55,8 @@ def retrive_n_results(collection_name, query_texts, n_results):
     collection = create_collection(collection_name)
     results = query(collection, query_texts, n_results)["documents"]  # 獲取檢索結果中的文檔內容
     
-    print("Results type:", type(results))  # 檢查 results 的類型
-    print("First item type:", type(results[0]))  # 檢查第一個項目的類型
+    # print("Results type:", type(results))  # 檢查 results 的類型
+    # print("First item type:", type(results[0]))  # 檢查第一個項目的類型
     
     # 如果 results 是巢狀列表，先展平它
     if isinstance(results, list) and any(isinstance(item, list) for item in results):
@@ -68,4 +68,4 @@ def retrive_n_results(collection_name, query_texts, n_results):
     return content
     
 
-print(str(retrive_n_results("collection_1", "東方快車", 2)))
+print(retrive_n_results("collection_1", "東方快車", 2))
