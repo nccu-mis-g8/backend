@@ -7,7 +7,6 @@ from peft import PeftModel
 from repository.trainingfile_repo import TrainingFileRepo
 from typing import List
 
-# 模型緩存字典
 model_cache = {}
 
 def load_model_for_user(model_dir: str, user_id: str):
@@ -62,6 +61,9 @@ def inference(model_dir: str, input_text: str, user_id: str) -> List[str] | None
             max_length=256 
         ).to(model.device)
 
+        generate_two_responses = random.random() < 0.5
+        num_return_sequences = 2 if generate_two_responses else 1
+
         outputs = model.generate(
             input_ids=inputs["input_ids"],
             attention_mask=inputs["attention_mask"],
@@ -69,14 +71,13 @@ def inference(model_dir: str, input_text: str, user_id: str) -> List[str] | None
             max_length=128,
             top_k=30,
             top_p=0.85,
-            temperature=0.8,
-            num_return_sequences=1
+            temperature=0.7,
+            num_return_sequences=num_return_sequences
         )
 
         generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True).strip()
 
-        #移除亂生成的標籤
-        tags_to_remove = ["INSTP", "[/INST]", "INST","[User]","User","[Assistant]","Assistant","\n:", ":","[你]","[我]","回答"]
+        tags_to_remove = ["INSTP", "[/INST]", "INST","[User]","User","[Assistant]","Assistant","\n:", ":","[你]","[我]","[輸入]"]
         for tag in tags_to_remove:
             generated_text = generated_text.replace(tag, "").strip()
 
