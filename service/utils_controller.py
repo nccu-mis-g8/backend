@@ -5,6 +5,7 @@ from flask import (
 )
 from flasgger import swag_from
 from flask_jwt_extended import get_jwt_identity, jwt_required
+from repository.shared_model_repo import SharedModelRepo
 from repository.trainedmodel_repo import TrainedModelRepo
 from repository.trainingfile_repo import TrainingFileRepo
 from models.user import User
@@ -582,27 +583,43 @@ def get_all_model_info():
         return jsonify(message="使用者不存在"), 404
 
     try:
-        models = TrainedModelRepo.find_all_trainedmodel_by_user_id(user.id)
+        trainedmodels = TrainedModelRepo.find_all_trainedmodel_by_user_id(user.id)
+        if not trainedmodels:
+            return jsonify(message="此使用者沒有任何訓練的模型"), 200
+        
+        sharedmodel = SharedModelRepo.find_sharedmodel_by_acquirer_id(user.id)
+        
+        if sharedmodel is not None:
+            shared_trained_model = TrainedModelRepo.find_trainedmodel_by_model_id(sharedmodel.model_id) 
     except SQLAlchemyError:
         return jsonify(message="資料庫錯誤，請稍後再試"), 500
 
     # Convert to list of dictionaries
-    model_data = [model_to_dict(model) for model in models]
+    trained_model_data = [model_to_dict(model) for model in trainedmodels]
     
-    if not model_data:
-        # If no models are found, return an empty message
-        return jsonify(message="此使用者沒有任何訓練的模型"), 200
+    if sharedmodel is not None:
+        shared_model_data  = {
+            "owner_id": shared_trained_model.user_id,
+            "owner_model_id": shared_trained_model.id,
+            "owner_modelname": shared_trained_model.modelname,
+            "owner_model_original_name": shared_trained_model.model_original_name,
+            "owner_model_anticipation": shared_trained_model.anticipation,
+            "owner_model_photo": f"{BASE_URL}/userinfo/images/{shared_trained_model.user_id}/{shared_trained_model.modelphoto}",
+        }
+        
+        trained_model_data.append(shared_model_data)
 
-    return jsonify(model_data)
+    return jsonify(trained_model_data), 200
     
 
 
 def model_to_dict(model) -> Dict:
     return {
-        "id": model.id,
+        "model_id": model.id,
         "user_id": model.user_id,
         "modelname": model.modelname,
         "model_original_name": model.model_original_name,
         "modelphoto": f"{BASE_URL}/userinfo/images/{model.user_id}/{model.modelphoto}",
         "anticipation": model.anticipation,
     }
+    
