@@ -12,12 +12,13 @@ model_cache = {}
 model_usage_counter = {}
 usage_threshold = 5 
 total_memory = torch.cuda.get_device_properties(0).total_memory
-threshold = int(total_memory * 0.8)
+threshold = int(total_memory * 0.75)
 
 def manage_model_cache():
     global model_cache, model_usage_counter
 
     current_memory = torch.cuda.memory_allocated()
+    print(f"Current memory allocated: {current_memory / 1e9:.2f} GB")
     if current_memory < threshold:
         return
 
@@ -25,14 +26,15 @@ def manage_model_cache():
 
     for user_id, _ in least_used_models:
         if user_id in model_cache:
-            if model_usage_counter[user_id] < usage_threshold: 
-                del model_cache[user_id]
-                del model_usage_counter[user_id]
-                torch.cuda.empty_cache()
-                print(f"Removed model for user_id: {user_id}")
-            current_memory = torch.cuda.memory_allocated()
-            if current_memory < threshold:
-                break
+            del model_cache[user_id]
+            del model_usage_counter[user_id]
+            torch.cuda.empty_cache()
+            torch.cuda.synchronize()  # 確保釋放記憶體生效
+            print(f"Removed model for user_id: {user_id}")
+
+        current_memory = torch.cuda.memory_allocated()
+        if current_memory < threshold:
+            break
 
 
 def load_model_for_user(model_dir: str, user_id: str):
@@ -41,25 +43,18 @@ def load_model_for_user(model_dir: str, user_id: str):
         print(f"Using cached model for user_id: {user_id}")
         model_usage_counter[user_id] += 1
 
-        # 检查是否超出使用次数
         if model_usage_counter[user_id] >= usage_threshold:
             manage_model_cache()
-            # 如果当前模型被清理，则重新加载
             if user_id not in model_cache:
                 print(f"Reloading model for user_id: {user_id} after cache cleanup")
                 return load_model_for_user(model_dir, user_id)
             else:
-                model_usage_counter[user_id] = 0  # 重置计数器
+                model_usage_counter[user_id] = 0
 
         return model_cache[user_id]
 
     print(f"Loading model for user_id: {user_id}")
-    # adapter_config_path = os.path.join(model_dir, "adapter_config.json")
-    # if os.path.exists(adapter_config_path):
-    #     print(f"PEFT adapter configuration found at {adapter_config_path}. Loading PEFT model...") 
-    # else:
-    #     model = PeftModel.from_pretrained(model, model_dir)
-    #     print("No adapter_config.json found. Loading base model without PEFT.")
+
     model = AutoModelForCausalLM.from_pretrained(model_dir)
     if not hasattr(model, "peft_config"):
         model = PeftModel.from_pretrained(model, model_dir)
@@ -91,7 +86,6 @@ def limit_stickers(text: str) -> str:
         text = "[照片]".join(photo_tokens[:max_photos]) + photo_tokens[max_photos]
 
     return text
-
 
 def inference(model_dir: str, input_text: str, user_id: str) -> List[str] | None:
     try:
@@ -168,7 +162,7 @@ def inference(model_dir: str, input_text: str, user_id: str) -> List[str] | None
             if "Assistant:" in generated_text:
                 generated_text = generated_text.split("Assistant:")[-1].strip()
 
-            tags_to_remove = ["ANCES","ANS","ANSE","ANSION","ANTS","[檔案]","<<SYS>>","INSTP", "[/INST]", "INST","[You]","[User]", "User", "[Assistant]", "Assistant", "\\n:", ":", "[你]", "[我]", "[輸入]", "ERM [/D]", "ANCE ", "S]", "\\", "/"]
+            tags_to_remove = ["問題：","入題","回答：","[入戲]","ANCES","ANS","ANSE","ANSION","ANTS","[檔案]","<<SYS>>","INSTP", "[/INST]", "INST","[You]","[User]", "User", "[Assistant]", "Assistant", "\\n:", ":", "[你]", "[我]", "[輸入]", "ERM [/D]", "ANCE ", "S]", "\\", "/"]
             for tag in tags_to_remove:
                 generated_text = generated_text.replace(tag, "").strip()
 
