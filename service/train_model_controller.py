@@ -302,56 +302,52 @@ def chat():
 
 @train_model_bp.post("/share-model")
 @jwt_required()
-@swag_from({
-    "tags": ["Model Sharing"],
-    "description": "Share a trained model.",
-    "parameters": [
-        {
-            "name": "Authorization",
-            "in": "header",
-            "required": True,
-            "description": "Bearer token for authorization",
-            "schema": {"type": "string", "example": "Bearer "},
+@swag_from(
+    {
+        "tags": ["Model Sharing"],
+        "description": "Share a trained model.",
+        "parameters": [
+            {
+                "name": "Authorization",
+                "in": "header",
+                "required": True,
+                "description": "Bearer token for authorization",
+                "schema": {"type": "string", "example": "Bearer "},
+            },
+            {
+                "name": "modelname",
+                "in": "formData",
+                "type": "string",
+                "required": True,
+                "description": "The name of the trained model to be shared",
+            },
+        ],
+        "responses": {
+            "200": {
+                "description": "Model successfully shared",
+                "examples": {
+                    "application/json": {
+                        "msg": "成功建立模型分享",
+                        "modelname": "example_model_name",
+                        "link": "uuid",
+                    }
+                },
+            },
+            "404": {
+                "description": "User or model not found",
+                "examples": {"application/json": {"message": "使用者不存在"}},
+            },
+            "403": {
+                "description": "Forbidden - Model does not belong to the user",
+                "examples": {"application/json": {"message": "無法取用該模型"}},
+            },
+            "500": {
+                "description": "Failed to create shared model",
+                "examples": {"application/json": {"message": "無法建立模型分享"}},
+            },
         },
-        {
-            "name": "modelname",
-            "in": "formData",
-            "type": "string",
-            "required": True,
-            "description": "The name of the trained model to be shared"
-        }
-    ],
-    "responses": {
-        "200": {
-            "description": "Model successfully shared",
-            "examples": {
-                "application/json": {
-                    "msg": "成功建立模型分享",
-                    "modelname": "example_model_name",
-                    "link": "uuid"
-                }
-            }
-        },
-        "404": {
-            "description": "User or model not found",
-            "examples": {
-                "application/json": {"message": "使用者不存在"}
-            }
-        },
-        "403": {
-            "description": "Forbidden - Model does not belong to the user",
-            "examples": {
-                "application/json": {"message": "無法取用該模型"}
-            }
-        },
-        "500": {
-            "description": "Failed to create shared model",
-            "examples": {
-                "application/json": {"message": "無法建立模型分享"}
-            }
-        }
     }
-})
+)
 def share_model():
     current_email = get_jwt_identity()
 
@@ -380,44 +376,38 @@ def share_model():
 
 @train_model_bp.route("/model/<string:link>", methods=["GET"])
 @jwt_required()
-@swag_from({
-    "tags": ["Model Sharing"],
-    "description": "Retrieve access to a shared model.",
-    "parameters": [
-        {
-            "name": "Authorization",
-            "in": "header",
-            "type": "string",
-            "required": True,
-            "schema": {"type": "string", "example": "Bearer "},
+@swag_from(
+    {
+        "tags": ["Model Sharing"],
+        "description": "Retrieve access to a shared model.",
+        "parameters": [
+            {
+                "name": "Authorization",
+                "in": "header",
+                "type": "string",
+                "required": True,
+                "schema": {"type": "string", "example": "Bearer "},
+            },
+            {
+                "name": "link",
+                "in": "path",
+                "type": "string",
+                "required": True,
+                "description": "Unique link identifier for the shared model",
+            },
+        ],
+        "responses": {
+            "200": {
+                "description": "Successfully retrieved model access",
+                "examples": {"application/json": {"message": "成功取得模型權限"}},
+            },
+            "404": {
+                "description": "User or shared model not found, or user does not have access",
+                "examples": {"application/json": {"message": "使用者不存在"}},
+            },
         },
-        {
-            "name": "link",
-            "in": "path",
-            "type": "string",
-            "required": True,
-            "description": "Unique link identifier for the shared model"
-        }
-    ],
-    "responses": {
-        "200": {
-            "description": "Successfully retrieved model access",
-            "examples": {
-                "application/json": {
-                    "message": "成功取得模型權限"
-                }
-            }
-        },
-        "404": {
-            "description": "User or shared model not found, or user does not have access",
-            "examples": {
-                "application/json": {
-                    "message": "使用者不存在"
-                }
-            }
-        }
     }
-})
+)
 def get_shared_model(link: str):
     current_email = get_jwt_identity()
 

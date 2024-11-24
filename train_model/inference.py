@@ -169,16 +169,17 @@ def inference(model_dir: str, input_text: str, user_id: str) -> List[str] | None
         generate_two_responses = random.random() < 0.5
         num_return_sequences = 2 if generate_two_responses else 1
 
-        outputs = model.generate(
-            input_ids=inputs["input_ids"],
-            attention_mask=inputs["attention_mask"],
-            do_sample=True,
-            max_length=128,
-            top_k=30,
-            top_p=0.85,
-            temperature=0.7,
-            num_return_sequences=num_return_sequences,
-        )
+        with torch.no_grad():
+            outputs = model.generate(
+                input_ids=inputs["input_ids"],
+                attention_mask=inputs["attention_mask"],
+                do_sample=True,
+                max_length=128,
+                top_k=30,
+                top_p=0.85,
+                temperature=0.7,
+                num_return_sequences=num_return_sequences,
+            )
 
         responses = []
         for i, output in enumerate(outputs):
