@@ -46,10 +46,7 @@ def generate_prompt(data_point):
     output_text = data_point.get("output", "")
 
     prompt = f"""\
-        [INST] <<SYS>>請依照情境做正確、合理以及和過去相似語氣的回答
-        
-        <</SYS>>
-
+        [INST] <<SYS>>請依照情境做正確、合理以及和過去相似語氣的回答<</SYS>>
         {instruction}
         {input_text}
     [/INST]"""
