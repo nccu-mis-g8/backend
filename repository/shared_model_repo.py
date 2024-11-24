@@ -27,16 +27,16 @@ class SharedModelRepo:
     @staticmethod
     def obtain_shared_model(link, acquirer_id) -> Dict:
         res = {"res": False, "msg": ""}
-        
+
         model: Optional[SharedModel] = SharedModel.query.filter_by(link=link).first()
         if model is None:
             res["msg"] = "找不到模型"
             return res
-        
+
         if model.acquirer_id is not None:
             res["msg"] = "連結已被使用"
             return res
-        
+
         try:
             model.acquirer_id = acquirer_id
             db.session.commit()
@@ -45,9 +45,9 @@ class SharedModelRepo:
         except Exception as e:
             db.session.rollback()
             res["msg"] = f"資料庫錯誤: {e}"
-        
+
         return res
-    
-    staticmethod
-    def find_sharedmodel_by_acquirer_id(user_id: int) -> SharedModel | None:
-        return SharedModel.query.filter_by(acquirer_id=user_id).first()
+
+    @staticmethod
+    def find_sharedmodels_by_acquirer_id(user_id: int) -> [SharedModel]:
+        return SharedModel.query.filter_by(acquirer_id=user_id)

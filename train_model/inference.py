@@ -10,9 +10,10 @@ from typing import List
 
 model_cache = {}
 model_usage_counter = {}
-usage_threshold = 5 
+usage_threshold = 5
 total_memory = torch.cuda.get_device_properties(0).total_memory
 threshold = int(total_memory * 0.75)
+
 
 def manage_model_cache():
     global model_cache, model_usage_counter
@@ -67,8 +68,9 @@ def load_model_for_user(model_dir: str, user_id: str):
 
     return model, tokenizer
 
+
 def limit_stickers(text: str) -> str:
-    #限制貼圖、貼文、照片的數量
+    # 限制貼圖、貼文、照片的數量
     max_stickers = 2
     max_posts = 2
     max_photos = 2
@@ -87,16 +89,44 @@ def limit_stickers(text: str) -> str:
 
     return text
 
+
 def inference(model_dir: str, input_text: str, user_id: str) -> List[str] | None:
     try:
-        greetings = ["晚上好","明天見","安安","午安","晚安","早安","早阿","早", "你好", "哈囉", "嗨","掰掰","拜拜","掰","拜","掰囉","拜囉","掰掰囉","拜拜囉","再見", "hello", "hi", "hey", "good morning", "good afternoon", "good evening"]
+        greetings = [
+            "晚上好",
+            "明天見",
+            "安安",
+            "午安",
+            "晚安",
+            "早安",
+            "早阿",
+            "早",
+            "你好",
+            "哈囉",
+            "嗨",
+            "掰掰",
+            "拜拜",
+            "掰",
+            "拜",
+            "掰囉",
+            "拜囉",
+            "掰掰囉",
+            "拜拜囉",
+            "再見",
+            "hello",
+            "hi",
+            "hey",
+            "good morning",
+            "good afternoon",
+            "good evening",
+        ]
 
         # 如果輸入屬於招呼語，返回相同的招呼語
         if input_text.lower().strip() in [greet.lower() for greet in greetings]:
             delay_seconds = random.uniform(3, 7)
             time.sleep(delay_seconds)
             return [input_text]
-        
+
         model, tokenizer = load_model_for_user(model_dir, user_id)
 
         chat = []
@@ -107,7 +137,7 @@ def inference(model_dir: str, input_text: str, user_id: str) -> List[str] | None
             training_file = user_history
 
         if training_file and os.path.exists(training_file.filename):
-            with open(training_file.filename, 'r') as f:
+            with open(training_file.filename, "r") as f:
                 df = pd.read_csv(f)
             num_samples = 5
             if len(df) > num_samples:
@@ -133,11 +163,7 @@ def inference(model_dir: str, input_text: str, user_id: str) -> List[str] | None
         prompt = "\n".join(chat)
 
         inputs = tokenizer(
-            prompt,
-            return_tensors="pt",
-            padding=True,
-            truncation=True,
-            max_length=256 
+            prompt, return_tensors="pt", padding=True, truncation=True, max_length=256
         ).to(model.device)
 
         generate_two_responses = random.random() < 0.5
@@ -151,7 +177,7 @@ def inference(model_dir: str, input_text: str, user_id: str) -> List[str] | None
             top_k=30,
             top_p=0.85,
             temperature=0.7,
-            num_return_sequences=num_return_sequences
+            num_return_sequences=num_return_sequences,
         )
 
         responses = []
@@ -162,14 +188,46 @@ def inference(model_dir: str, input_text: str, user_id: str) -> List[str] | None
             if "Assistant:" in generated_text:
                 generated_text = generated_text.split("Assistant:")[-1].strip()
 
-            tags_to_remove = ["問題：","入題","回答：","[入戲]","ANCES","ANS","ANSE","ANSION","ANTS","[檔案]","<<SYS>>","INSTP", "[/INST]", "INST","[You]","[User]", "User", "[Assistant]", "Assistant", "\\n:", ":", "[你]", "[我]", "[輸入]", "ERM [/D]", "ANCE ", "S]", "\\", "/"]
+            tags_to_remove = [
+                "問題：",
+                "入題",
+                "回答：",
+                "[入戲]",
+                "ANCES",
+                "ANS",
+                "ANSE",
+                "ANSION",
+                "ANTS",
+                "[檔案]",
+                "<<SYS>>",
+                "INSTP",
+                "[/INST]",
+                "INST",
+                "[You]",
+                "[User]",
+                "User",
+                "[Assistant]",
+                "Assistant",
+                "\\n:",
+                ":",
+                "[你]",
+                "[我]",
+                "[輸入]",
+                "ERM [/D]",
+                "ANCE ",
+                "S]",
+                "\\",
+                "/",
+            ]
             for tag in tags_to_remove:
                 generated_text = generated_text.replace(tag, "").strip()
 
             if input_text in generated_text:
                 generated_text = generated_text.replace(input_text, "").strip()
 
-            generated_text = " ".join(line for line in generated_text.splitlines() if line.strip())
+            generated_text = " ".join(
+                line for line in generated_text.splitlines() if line.strip()
+            )
 
             responses.append(generated_text)
 

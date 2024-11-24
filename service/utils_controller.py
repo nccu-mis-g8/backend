@@ -5,6 +5,7 @@ from flask import (
 )
 from flasgger import swag_from
 from flask_jwt_extended import get_jwt_identity, jwt_required
+from models import shared_model
 from repository.shared_model_repo import SharedModelRepo
 from repository.trainedmodel_repo import TrainedModelRepo
 from repository.trainingfile_repo import TrainingFileRepo
@@ -23,17 +24,23 @@ logger = logging.getLogger(__name__)
 FILE_DIRECTORY = "..\\training_file"
 
 # BASE_URL = "http://192.168.1.109:8080" # 安的IP
-BASE_URL = "https://nccu-group-8.work"   # 主機IP
+BASE_URL = "https://nccu-group-8.work"  # 主機IP
 
 
 def allowed_file(filename, extension):
     return "." in filename and filename.rsplit(".", 1)[1].lower() == extension
 
 
-# TODO: remove this api after testing
-@utils_bp.get("/")
-def hello_world():
-    return "Hello, World!"
+def model_to_dict(model, is_shared=False) -> Dict:
+    return {
+        "model_id": model.id,
+        "user_id": model.user_id,
+        "modelname": model.modelname,
+        "model_original_name": model.model_original_name,
+        "modelphoto": f"{BASE_URL}/userinfo/images/{model.user_id}/{model.modelphoto}",
+        "anticipation": model.anticipation,
+        "is_shared": is_shared,
+    }
 
 
 @utils_bp.post("/user/upload_csv_file")
@@ -498,11 +505,13 @@ def get_model_status(model_Id):
                 "model_name": trained_model_status.modelname,
                 "model_start_time": (
                     trained_model_status.start_time.strftime("%Y-%m-%d %H:%M:%S")
-                    if trained_model_status.start_time is not None else "N/A"
+                    if trained_model_status.start_time is not None
+                    else "N/A"
                 ),
                 "model_end_time": (
                     trained_model_status.end_time.strftime("%Y-%m-%d %H:%M:%S")
-                    if trained_model_status.end_time is not None else "N/A"
+                    if trained_model_status.end_time is not None
+                    else "N/A"
                 ),
                 "model_photo": f"{BASE_URL}/userinfo/images/{training_file_status.user_id}/{photo_path}",
                 "model_anticipation": trained_model_status.anticipation,
@@ -514,71 +523,65 @@ def get_model_status(model_Id):
 
 @utils_bp.get("/user/all_model_info")
 @jwt_required()
-@swag_from({
-    'tags': ['Utils'],
-    'description': '拿到指定使用者的所有模型資訊',
-    'parameters': [
-        {
-            'name': 'Authorization',
-            'in': 'header',
-            'type': 'string',
-            'required': True,
-            'description': 'JWT token to authenticate the request.',
-            "schema": {"type": "string", "example": "Bearer "},
-        }
-    ],
-    'responses': {
-        200: {
-            'description': 'Successfully retrieved all model information',
-            'content': {
-                'application/json': {
-                    'example': [
-                        {
-                            "id": 1,
-                            "user_id": 5,
-                            "modelname": "d8ff0712-1ffb-4122-aa01-25b0439ee8c9",
-                            "model_original_name": "子安",
-                            "modelphoto": "avatar.png",
-                            "anticipation": "帥氣的人"
-                        },
-                        {
-                            "id": 2,
-                            "user_id": 5,
-                            "modelname": "9c7c9123-2abc-5678-dcba-34f0123fe8b7",
-                            "model_original_name": "致愷",
-                            "modelphoto": "avatar2.png",
-                            "anticipation": "傻子"
-                        }
-                    ]
-                }
+@swag_from(
+    {
+        "tags": ["Utils"],
+        "description": "拿到指定使用者的所有模型資訊",
+        "parameters": [
+            {
+                "name": "Authorization",
+                "in": "header",
+                "type": "string",
+                "required": True,
+                "description": "JWT token to authenticate the request.",
+                "schema": {"type": "string", "example": "Bearer "},
             }
-        },
-        404: {
-            'description': 'User does not exist',
-            'content': {
-                'application/json': {
-                    'example': {
-                        'message': '使用者不存在'
+        ],
+        "responses": {
+            200: {
+                "description": "Successfully retrieved all model information",
+                "content": {
+                    "application/json": {
+                        "example": [
+                            {
+                                "id": 1,
+                                "user_id": 5,
+                                "modelname": "d8ff0712-1ffb-4122-aa01-25b0439ee8c9",
+                                "model_original_name": "子安",
+                                "modelphoto": "avatar.png",
+                                "anticipation": "帥氣的人",
+                                "is_shared": False,
+                            },
+                            {
+                                "id": 2,
+                                "user_id": 3,
+                                "modelname": "9c7c9123-2abc-5678-dcba-34f0123fe8b7",
+                                "model_original_name": "致愷",
+                                "modelphoto": "avatar2.png",
+                                "anticipation": "傻子",
+                                "is_shared": True,
+                            },
+                        ]
                     }
-                }
-            }
+                },
+            },
+            404: {
+                "description": "User does not exist",
+                "content": {"application/json": {"example": {"message": "使用者不存在"}}},
+            },
+            500: {
+                "description": "Database error",
+                "content": {
+                    "application/json": {"example": {"message": "資料庫錯誤，請稍後再試"}}
+                },
+            },
         },
-        500: {
-            'description': 'Database error',
-            'content': {
-                'application/json': {
-                    'example': {
-                        'message': '資料庫錯誤，請稍後再試'
-                    }
-                }
-            }
-        }
     }
-})
+)
 def get_all_model_info():
     current_email = get_jwt_identity()
     user = User.get_user_by_email(current_email)
-    
+
     if user is None:
         return jsonify(message="使用者不存在"), 404
 
@@ -586,40 +589,21 @@ def get_all_model_info():
         trainedmodels = TrainedModelRepo.find_all_trainedmodel_by_user_id(user.id)
         if not trainedmodels:
             return jsonify(message="此使用者沒有任何訓練的模型"), 200
-        
-        sharedmodel = SharedModelRepo.find_sharedmodel_by_acquirer_id(user.id)
-        
-        if sharedmodel is not None:
-            shared_trained_model = TrainedModelRepo.find_trainedmodel_by_model_id(sharedmodel.model_id) 
+
+        sharedmodels = SharedModelRepo.find_sharedmodels_by_acquirer_id(user.id)
+        # 取得sharemodel的trainedmodel
+        sharedmodels_obj = [
+            TrainedModelRepo.find_trainedmodel_by_model_id(model.model_id)
+            for model in sharedmodels
+        ]
     except SQLAlchemyError:
         return jsonify(message="資料庫錯誤，請稍後再試"), 500
 
     # Convert to list of dictionaries
     trained_model_data = [model_to_dict(model) for model in trainedmodels]
-    
-    if sharedmodel is not None:
-        shared_model_data  = {
-            "owner_id": shared_trained_model.user_id,
-            "owner_model_id": shared_trained_model.id,
-            "owner_modelname": shared_trained_model.modelname,
-            "owner_model_original_name": shared_trained_model.model_original_name,
-            "owner_model_anticipation": shared_trained_model.anticipation,
-            "owner_model_photo": f"{BASE_URL}/userinfo/images/{shared_trained_model.user_id}/{shared_trained_model.modelphoto}",
-        }
-        
-        trained_model_data.append(shared_model_data)
 
+    shared_model_data = [
+        model_to_dict(model, is_shared=True) for model in sharedmodels_obj
+    ]
+    trained_model_data.extend(shared_model_data)
     return jsonify(trained_model_data), 200
-    
-
-
-def model_to_dict(model) -> Dict:
-    return {
-        "model_id": model.id,
-        "user_id": model.user_id,
-        "modelname": model.modelname,
-        "model_original_name": model.model_original_name,
-        "modelphoto": f"{BASE_URL}/userinfo/images/{model.user_id}/{model.modelphoto}",
-        "anticipation": model.anticipation,
-    }
-    
