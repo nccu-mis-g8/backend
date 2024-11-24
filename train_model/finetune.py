@@ -19,25 +19,42 @@ CUTOFF_LEN = 512
 BASE_MODEL_DIR = "./train_model/saved-taide-model"
 
 
-def tokenize(tokenizer, prompt, add_eos_token=True):
-    result = tokenizer(
+def tokenize(tokenizer, prompt, output_text, add_eos_token=True):
+    prompt_result = tokenizer(
         prompt,
         truncation=True,
         max_length=CUTOFF_LEN,
         padding="max_length",
-        return_tensors=None,
+        return_tensors="pt",
     )
-    if (
-        result["input_ids"][-1] != tokenizer.eos_token_id
-        and len(result["input_ids"]) < CUTOFF_LEN
-        and add_eos_token
-    ):
-        result["input_ids"].append(tokenizer.eos_token_id)
-        result["attention_mask"].append(1)
 
-    result["labels"] = result["input_ids"].copy()
+    # Tokenize output_text
+    output_result = tokenizer(
+        output_text,
+        truncation=True,
+        max_length=CUTOFF_LEN,
+        padding="max_length",
+        return_tensors="pt",
+    )
 
-    return result
+    # 合併 input_ids 和 labels，注意 EOS token 的處理
+    input_ids = prompt_result["input_ids"].squeeze(0).tolist()
+    labels = prompt_result["input_ids"].squeeze(0).tolist()
+
+    # 將 output_text 附加到 labels
+    labels.extend(output_result["input_ids"].squeeze(0).tolist())
+
+    # 添加 EOS token
+    if add_eos_token and len(labels) < CUTOFF_LEN:
+        labels.append(tokenizer.eos_token_id)
+
+    attention_mask = [1] * len(input_ids)
+
+    return {
+        "input_ids": input_ids[:CUTOFF_LEN],
+        "attention_mask": attention_mask[:CUTOFF_LEN],
+        "labels": labels[:CUTOFF_LEN],
+    }
 
 
 def generate_prompt(data_point):
@@ -45,12 +62,13 @@ def generate_prompt(data_point):
     input_text = data_point.get("input", "")
     output_text = data_point.get("output", "")
 
-    prompt = f"""\
-        [INST] <<SYS>>請依照情境做正確、合理以及和過去相似語氣的回答<</SYS>>
+#調整
+    prompt = f"""<s>[INST] <<SYS>>請依照情境做正確、合理以及和過去類似語氣的回答<</SYS>>
         {instruction}
+
         {input_text}
     [/INST]"""
-    return prompt + " " + output_text + "</s>"
+    return prompt, output_text
 
 
 def train(id: str, model_dir: str, save_dir: str, data_path: str):
@@ -90,7 +108,7 @@ def train(id: str, model_dir: str, save_dir: str, data_path: str):
     training_args = TrainingArguments(
         output_dir=f"./ouput/{id}",
         num_train_epochs=3,
-        per_device_train_batch_size=4,
+        per_device_train_batch_size=8,
         gradient_accumulation_steps=2,
         learning_rate=3e-4,
         fp16=True,
@@ -103,9 +121,8 @@ def train(id: str, model_dir: str, save_dir: str, data_path: str):
     )
 
     def generate_and_tokenize_prompt(data_point):
-        full_prompt = generate_prompt(data_point)
-        tokenized_full_prompt = tokenize(tokenizer, full_prompt)
-        return tokenized_full_prompt
+        prompt, output_text = generate_prompt(data_point)
+        return tokenize(tokenizer, prompt, output_text)
 
     dataset = datasets.Dataset.from_pandas(pd.read_csv(data_path))
     train_data = dataset.map(generate_and_tokenize_prompt)

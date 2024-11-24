@@ -9,26 +9,58 @@ from repository.trainingfile_repo import TrainingFileRepo
 from typing import List
 
 model_cache = {}
+model_usage_counter = {}
+usage_threshold = 5 
 total_memory = torch.cuda.get_device_properties(0).total_memory
 threshold = int(total_memory * 0.8)
 
+def manage_model_cache():
+    global model_cache, model_usage_counter
+
+    current_memory = torch.cuda.memory_allocated()
+    if current_memory < threshold:
+        return
+
+    least_used_models = sorted(model_usage_counter.items(), key=lambda x: x[1])
+
+    for user_id, _ in least_used_models:
+        if user_id in model_cache:
+            if model_usage_counter[user_id] < usage_threshold: 
+                del model_cache[user_id]
+                del model_usage_counter[user_id]
+                torch.cuda.empty_cache()
+                print(f"Removed model for user_id: {user_id}")
+            current_memory = torch.cuda.memory_allocated()
+            if current_memory < threshold:
+                break
+
 
 def load_model_for_user(model_dir: str, user_id: str):
+    global model_cache, model_usage_counter
     if user_id in model_cache:
         print(f"Using cached model for user_id: {user_id}")
+        model_usage_counter[user_id] += 1
+
+        # 检查是否超出使用次数
+        if model_usage_counter[user_id] >= usage_threshold:
+            manage_model_cache()
+            # 如果当前模型被清理，则重新加载
+            if user_id not in model_cache:
+                print(f"Reloading model for user_id: {user_id} after cache cleanup")
+                return load_model_for_user(model_dir, user_id)
+            else:
+                model_usage_counter[user_id] = 0  # 重置计数器
+
         return model_cache[user_id]
 
     print(f"Loading model for user_id: {user_id}")
-    
-    model = AutoModelForCausalLM.from_pretrained(model_dir)
-    
     # adapter_config_path = os.path.join(model_dir, "adapter_config.json")
     # if os.path.exists(adapter_config_path):
     #     print(f"PEFT adapter configuration found at {adapter_config_path}. Loading PEFT model...") 
     # else:
     #     model = PeftModel.from_pretrained(model, model_dir)
     #     print("No adapter_config.json found. Loading base model without PEFT.")
-
+    model = AutoModelForCausalLM.from_pretrained(model_dir)
     if not hasattr(model, "peft_config"):
         model = PeftModel.from_pretrained(model, model_dir)
     model.to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
@@ -36,6 +68,8 @@ def load_model_for_user(model_dir: str, user_id: str):
 
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
     model_cache[user_id] = (model, tokenizer)
+    model_usage_counter[user_id] = 1
+
     return model, tokenizer
 
 def limit_stickers(text: str) -> str:
@@ -81,7 +115,7 @@ def inference(model_dir: str, input_text: str, user_id: str) -> List[str] | None
         if training_file and os.path.exists(training_file.filename):
             with open(training_file.filename, 'r') as f:
                 df = pd.read_csv(f)
-            num_samples = 3
+            num_samples = 5
             if len(df) > num_samples:
                 df_sample = df.tail(n=num_samples)
             else:
@@ -134,7 +168,7 @@ def inference(model_dir: str, input_text: str, user_id: str) -> List[str] | None
             if "Assistant:" in generated_text:
                 generated_text = generated_text.split("Assistant:")[-1].strip()
 
-            tags_to_remove = ["<<SYS>>","INSTP", "[/INST]", "INST","[You]","[User]", "User", "[Assistant]", "Assistant", "\\n:", ":", "[你]", "[我]", "[輸入]", "ERM [/D]", "ANCE ", "S]", "\\", "/"]
+            tags_to_remove = ["ANCES","ANS","ANSE","ANSION","ANTS","[檔案]","<<SYS>>","INSTP", "[/INST]", "INST","[You]","[User]", "User", "[Assistant]", "Assistant", "\\n:", ":", "[你]", "[我]", "[輸入]", "ERM [/D]", "ANCE ", "S]", "\\", "/"]
             for tag in tags_to_remove:
                 generated_text = generated_text.replace(tag, "").strip()
 
