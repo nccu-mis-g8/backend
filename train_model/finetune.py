@@ -13,10 +13,17 @@ from peft import (
 import datasets
 import pandas as pd
 import torch
+import gc
 
 CUTOFF_LEN = 512
 
 BASE_MODEL_DIR = "./train_model/saved-taide-model"
+
+
+def cleanup_model(model):
+    del model
+    gc.collect()
+    torch.cuda.empty_cache()
 
 
 def tokenize(tokenizer, prompt, output_text, add_eos_token=True):
@@ -62,7 +69,7 @@ def generate_prompt(data_point):
     input_text = data_point.get("input", "")
     output_text = data_point.get("output", "")
 
-#調整
+    # 調整
     prompt = f"""<s>[INST] <<SYS>>請依照情境做正確、合理以及和過去類似語氣的回答<</SYS>>
         {instruction}
 
@@ -127,7 +134,7 @@ def train(id: str, model_dir: str, save_dir: str, data_path: str):
     dataset = datasets.Dataset.from_pandas(pd.read_csv(data_path))
     train_data = dataset.map(generate_and_tokenize_prompt)
     print("start training")
-    
+
     trainer = Trainer(
         model=model,
         train_dataset=train_data,
@@ -143,5 +150,5 @@ def train(id: str, model_dir: str, save_dir: str, data_path: str):
     tokenizer.save_pretrained(save_dir)
 
     model.save_pretrained(save_dir)
-
+    cleanup_model(model)
     print("Training and saving completed.")
