@@ -36,11 +36,8 @@ class SharedModelRepo:
                 SharedModel.acquirer_id == acquirer_id,
             )
             .first()
-        )
 
-    @staticmethod
-    def find_trainedmodel_by_acquirer_id(acquirer_id) -> list[TrainedModel]:
-        return SharedModel.query.filter_by(acquirer_id=acquirer_id).all()
+        )
 
     @staticmethod
     def obtain_shared_model(link, acquirer_id) -> Dict:
@@ -61,3 +58,8 @@ class SharedModelRepo:
         else:
             res["msg"] = "Failed to update acquirer_id"
         return res
+    
+    @staticmethod
+    def find_sharedmodels_by_acquirer_id(acquirer_id) -> list[TrainedModel]:
+        return SharedModel.query.filter_by(acquirer_id=acquirer_id).all()
+
