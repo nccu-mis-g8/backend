@@ -190,9 +190,6 @@ def inference(model_dir: str, input_text: str, user_id: str, max_retries:int = 3
 
                     tags_to_remove = [
                         "ANTER",
-                        "[",
-                        "[]",
-                        "]",
                         "問：",
                         "問題：",
                         "入題",
