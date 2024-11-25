@@ -12,9 +12,7 @@ class SharedModel(db.Model):
     # 模型
     model_id = db.Column(db.Integer, db.ForeignKey("trained_model.id"), nullable=False)
     # 取走模型的人（一個link只能用一次）
-    acquirer_id = db.Column(
-        db.Integer, db.ForeignKey("user.id"), nullable=True
-    )
+    acquirer_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
     link: str = db.Column(db.String(50), nullable=False)
 
     def __init__(self, model_id):
