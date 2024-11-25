@@ -59,6 +59,14 @@ class TrainedModelRepo:
         return TrainedModel.query.filter_by(id=model_id).first()
 
     @staticmethod
+    def find_trainedmodel_by_user_and_modelname(
+        user_id, modelname
+    ) -> TrainedModel | None:
+        return TrainedModel.query.filter_by(
+            user_id=user_id, modelname=modelname
+        ).first()
+
+    @staticmethod
     def find_trainedmodel_by_user_and_model_id(
         user_id, model_id
     ) -> TrainedModel | None:
@@ -71,7 +79,7 @@ class TrainedModelRepo:
             .order_by(TrainedModel.start_time)
             .all()
         )
-        
+
     @staticmethod
     def delete_trainedmodel_by_user_and_model_id(user_id: int, model_id: int) -> bool:
         model = TrainedModel.query.filter_by(user_id=user_id, id=model_id).first()
@@ -80,6 +88,3 @@ class TrainedModelRepo:
             db.session.commit()
             return True
         return False
-    
-    
-
