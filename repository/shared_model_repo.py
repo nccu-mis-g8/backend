@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from models.shared_model import SharedModel
 from extensions import db
@@ -25,29 +25,35 @@ class SharedModelRepo:
             return False
 
     @staticmethod
+    def find_trainedmodel_by_modelname_and_acquirer_id(
+        modelname, acquirer_id
+    ) -> Optional[TrainedModel]:
+        return (
+            db.session.query(TrainedModel)
+            .join(SharedModel, SharedModel.model_id == TrainedModel.id)
+            .filter(
+                TrainedModel.modelname == modelname,
+                SharedModel.acquirer_id == acquirer_id,
+            )
+            .first()
+        )
+
+    @staticmethod
     def obtain_shared_model(link, acquirer_id) -> Dict:
         res = {"res": False, "msg": ""}
-
         model: Optional[SharedModel] = SharedModel.query.filter_by(link=link).first()
         if model is None:
             res["msg"] = "找不到模型"
             return res
-
+        # if model 被取走了
         if model.acquirer_id is not None:
-            res["msg"] = "連結已被使用"
+            res["msg"] = "連結己被使用"
             return res
 
-        try:
-            model.acquirer_id = acquirer_id
-            db.session.commit()
+        model.acquirer_id = acquirer_id
+        if SharedModelRepo.save():
             res["res"] = True
-            res["msg"] = "成功取得模型權限"
-        except Exception as e:
-            db.session.rollback()
-            res["msg"] = f"資料庫錯誤: {e}"
-
+            res["msg"] = "成功取得模型"
+        else:
+            res["msg"] = "Failed to update acquirer_id"
         return res
-
-    @staticmethod
-    def find_sharedmodels_by_acquirer_id(user_id: int) -> [SharedModel]:
-        return SharedModel.query.filter_by(acquirer_id=user_id)
