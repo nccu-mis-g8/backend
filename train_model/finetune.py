@@ -53,13 +53,11 @@ def generate_prompt(data_point):
     output_text = data_point.get("output", "")
 
     # 調整
-    prompt = f"""<s>[INST] <<SYS>>請依照情境做正確、合理以及和過去類似語氣的回答<</SYS>>
-        {instruction}
-
+    prompt = f"""<s>[INST] <<SYS>>請依照情境做正確、合理以及和過去類似語氣的回答。{instruction}<</SYS>>
         {input_text}
-    [/INST]"""
-    return prompt + " " + output_text + "</s>"
-
+        [/INST]"""
+    
+    return prompt + " " + output_text.strip() + "</s>"
 
 def train(id: str, model_dir: str, save_dir: str, data_path: str):
     device_map = "auto" if torch.cuda.is_available() else "cpu"
@@ -71,7 +69,7 @@ def train(id: str, model_dir: str, save_dir: str, data_path: str):
     )
     tokenizer = AutoTokenizer.from_pretrained(
         BASE_MODEL_DIR,
-        add_eos_token=True,
+        # add_eos_token=True,
     )
     tokenizer.pad_token = tokenizer.eos_token
 
@@ -102,6 +100,7 @@ def train(id: str, model_dir: str, save_dir: str, data_path: str):
         gradient_accumulation_steps=2,
         learning_rate=3e-4,
         fp16=True,
+        save_total_limit=2,
         max_steps=-1,
         warmup_ratio=0.03,
         weight_decay=0.0,
@@ -116,8 +115,8 @@ def train(id: str, model_dir: str, save_dir: str, data_path: str):
         return tokenized_full_prompt
 
     dataset = datasets.Dataset.from_pandas(pd.read_csv(data_path))
-    train_data = dataset.map(generate_and_tokenize_prompt)
-    print("start training")
+    train_data = dataset.map(generate_and_tokenize_prompt, batched=False)
+    print(f"[INFO] Dataset processed with {len(train_data)} examples.")
 
     trainer = Trainer(
         model=model,
@@ -126,13 +125,13 @@ def train(id: str, model_dir: str, save_dir: str, data_path: str):
         args=training_args,
     )
 
-    print("Starting training...")
+    print("[INFO] Starting training...")
     trainer.train()
 
-    print("Saving model and tokenizer...")
-    model.config.save_pretrained(save_dir)
-    tokenizer.save_pretrained(save_dir)
-
+    print("[INFO] Saving model and tokenizer...")
     model.save_pretrained(save_dir)
+    tokenizer.save_pretrained(save_dir)
+    # model.config.save_pretrained(save_dir)
+
     cleanup_model(model)
     print("Training and saving completed.")
