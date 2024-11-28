@@ -56,8 +56,9 @@ def generate_prompt(data_point):
     prompt = f"""<s>[INST] <<SYS>>請依照情境做正確、合理以及和過去類似語氣的回答。{instruction}<</SYS>>
         {input_text}
         [/INST]"""
-    
+
     return prompt + " " + output_text.strip() + "</s>"
+
 
 def train(id: str, model_dir: str, save_dir: str, data_path: str):
     device_map = "auto" if torch.cuda.is_available() else "cpu"

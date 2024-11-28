@@ -130,22 +130,28 @@ def train_model():
         # 如果是第一次训练
         if len(saved_models) == 0 or str(trained_model.id) == model_id:
             print("第一次訓練")
-            train(
-                str(trained_model.id),
-                BASE_MODEL_DIR,
-                model_path,
-                os.path.join(FILE_DIRECTORY, file_path),
-            )
+            threading.Thread(
+                target=start_train,
+                args=(
+                    str(trained_model.id),
+                    BASE_MODEL_DIR,
+                    model_path,
+                    os.path.join(FILE_DIRECTORY, file_path),
+                ),
+            ).start()
         else:
             last_model = saved_models[-1]
             print(f"接續舊的model: {last_model.id} 繼續訓練")
             # 已經練過了，接續之前練過的model再訓練
-            train(
-                str(trained_model.id),
-                os.path.join("..\\saved_models", last_model.modelname),
-                model_path,
-                os.path.join(FILE_DIRECTORY, file_path),
-            )
+            threading.Thread(
+                target=start_train,
+                args=(
+                    str(trained_model.id),
+                    os.path.join("..\\saved_models", last_model.modelname),
+                    model_path,
+                    os.path.join(FILE_DIRECTORY, file_path),
+                ),
+            ).start()
 
         training_file.is_trained = True
         TrainingFileRepo.save_training_file()
@@ -163,7 +169,9 @@ def train_model():
     except Exception as e:
         return jsonify({"status": "Error", "message": str(e)}), 500
 
-def start_train():
+
+def start_train(id: str, model_dir: str, save_dir: str, data_path: str):
+    train(id, model_dir, save_dir, data_path)
 
 
 @train_model_bp.post("/chat")
