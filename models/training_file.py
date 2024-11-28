@@ -11,12 +11,15 @@ class TrainingFile(db.Model):
     filename = db.Column(db.String(50), nullable=False)
     # original_file_name是user上傳時，本機的file name
     original_file_name = db.Column(db.String(255), nullable=False)
+    # 是否開始訓練
     start_train: bool = db.Column(db.Boolean, default=False, nullable=False)
+    # 是否訓練完成
     is_trained: bool = db.Column(db.Boolean, default=False, nullable=False)
     upload_time = db.Column(DateTime(timezone=True), default=func.now())
+    error_msg = db.Column(db.String(65), nullable=False)
 
     # 上傳file後先生成TrainingFile物件，再從TrainingFile object拿filename做為檔名存file。
-    def __init__(self, user_id, model_id,original_file_name, filename=None):
+    def __init__(self, user_id, model_id, original_file_name, filename=None):
         self.user_id = user_id
         self.model_id = model_id
         if filename is not None:

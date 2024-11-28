@@ -8,7 +8,7 @@ from peft import PeftModel
 from repository.trainingfile_repo import TrainingFileRepo
 from typing import List
 
-model_cache = {}  
+model_cache = {}
 model_usage_counter = {}
 max_cache_size = 3
 usage_threshold = 5
@@ -21,8 +21,10 @@ def manage_model_cache():
     global model_cache, model_usage_counter
 
     current_memory = torch.cuda.memory_allocated()
-    print(f"[INFO] Current memory allocated: {current_memory / 1e9:.2f} GB (Threshold: {threshold / 1e9:.2f} GB)")
-    
+    print(
+        f"[INFO] Current memory allocated: {current_memory / 1e9:.2f} GB (Threshold: {threshold / 1e9:.2f} GB)"
+    )
+
     if current_memory >= threshold or len(model_cache) > max_cache_size:
         print("[INFO] Memory or cache size exceeded. Cleaning up cache...")
         least_used_models = sorted(model_usage_counter.items(), key=lambda x: x[1])
@@ -39,9 +41,7 @@ def manage_model_cache():
 
 
 def load_model_for_user(model_dir: str, user_id: str):
-
     global model_cache, model_usage_counter
-
 
     if user_id in model_cache:
         print(f"[INFO] Using cached model for user_id: {user_id}")
@@ -65,6 +65,7 @@ def load_model_for_user(model_dir: str, user_id: str):
 
     return model, tokenizer
 
+
 def limit_stickers(text: str) -> str:
     # 限制貼圖、貼文、照片的數量
     max_stickers = 2
@@ -86,7 +87,9 @@ def limit_stickers(text: str) -> str:
     return text
 
 
-def inference(model_dir: str, input_text: str, user_id: str, max_retries:int = 3) -> List[str] | None:
+def inference(
+    model_dir: str, input_text: str, user_id: str, max_retries: int = 3
+) -> List[str] | None:
     try:
         greetings = [
             "晚上好",
@@ -162,7 +165,6 @@ def inference(model_dir: str, input_text: str, user_id: str, max_retries:int = 3
             prompt, return_tensors="pt", padding=True, truncation=True, max_length=256
         ).to(model.device)
 
-
         for attempt in range(max_retries):
             try:
                 generate_two_responses = random.random() < 0.5
@@ -182,7 +184,9 @@ def inference(model_dir: str, input_text: str, user_id: str, max_retries:int = 3
 
                 responses = []
                 for i, output in enumerate(outputs):
-                    generated_text = tokenizer.decode(output, skip_special_tokens=True).strip()
+                    generated_text = tokenizer.decode(
+                        output, skip_special_tokens=True
+                    ).strip()
                     generated_text = limit_stickers(generated_text)
 
                     if "Assistant:" in generated_text:
@@ -225,7 +229,7 @@ def inference(model_dir: str, input_text: str, user_id: str, max_retries:int = 3
                         "\\",
                         "/",
                         "(null)",
-                        "null"
+                        "null",
                     ]
                     for tag in tags_to_remove:
                         generated_text = generated_text.replace(tag, "").strip()
@@ -241,23 +245,26 @@ def inference(model_dir: str, input_text: str, user_id: str, max_retries:int = 3
 
                     if any(responses):
                         return responses
-                    
+
                     print(f"[WARN] Attempt {attempt + 1}: Empty response. Retrying...")
                     time.sleep(1)
-                
+
             except torch.cuda.OutOfMemoryError:
-                    print(f"[ERROR] CUDA Out of Memory during attempt {attempt + 1}. Cleaning up...")
-                    torch.cuda.empty_cache()
-                    time.sleep(5) 
+                print(
+                    f"[ERROR] CUDA Out of Memory during attempt {attempt + 1}. Cleaning up..."
+                )
+                torch.cuda.empty_cache()
+                time.sleep(5)
             except Exception as e:
                 if "524" in str(e):
-                    print(f"[WARN] 524 Timeout encountered on attempt {attempt + 1}. Retrying...")
+                    print(
+                        f"[WARN] 524 Timeout encountered on attempt {attempt + 1}. Retrying..."
+                    )
                 else:
                     print(f"[ERROR] Inference attempt {attempt + 1} failed: {e}")
 
             print("[ERROR] All inference attempts failed or returned empty responses.")
             return None
-
 
     except Exception as e:
         print(f"Error in inference: {e}")

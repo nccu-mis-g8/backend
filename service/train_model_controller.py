@@ -15,6 +15,7 @@ from service.utils_controller import FILE_DIRECTORY
 from train_model.finetune import BASE_MODEL_DIR, train
 from train_model.inference import inference
 import os
+import threading
 
 
 train_model_bp = Blueprint("finetune", __name__)
@@ -161,6 +162,8 @@ def train_model():
 
     except Exception as e:
         return jsonify({"status": "Error", "message": str(e)}), 500
+
+def start_train():
 
 
 @train_model_bp.post("/chat")
