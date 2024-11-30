@@ -1,28 +1,42 @@
 import openai
 import os
+import json
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-def analyze_and_modify_response(response: str, history: list) -> str:
-
+def analyze_and_modify_response(input:str,response: str,history_context:str) -> str:
     prompt = (
-        f"請你分析以下的對話，學習 output 歷史對話者的語氣並判斷 output是否合理，"
-        f"請注意合理的話請不要做改動，不合理請協助改正或新增內容。"
-        f"不合理的情況除了情境之外，也不能透漏自己是 AI人工智慧，因為聊天回覆者是用戶的好朋友才對。"
-        f"另外，請將 [貼圖] 替換成對話情境合適的表情符號，再將結果直接放到output即可，不須用說明改動原因。\n"
-        f"歷史對話：{history}\n"
-        f"Output: {response}"
+        f"以下是用戶的歷史對話記錄，請模仿用戶的說話風格進行回應：\n"
+        f"{history_context}\n\n"
+        f"請檢查以下對話，檢查是否是符合情境的回答，並根據用戶的語氣進行修正：\n"
+        f"1. 如果情境回答合理，保留不變；\n"
+        f"2. 如果情境回答不合理，請根據用戶的語氣做修正；\n"
+        f"3. 不得包含與語境無關或令人困惑的內容；\n"
+        f"4. 將 [貼圖] 替換為合適的表情符號。\n\n"
+        f"Input: {input}\n\n"
+        f"Output: {response}\n\n"
+        f"返回結果應只有修正後的 Output，無其他說明。"
     )
 
     try:
-        openai_response = openai.ChatCompletion.create(
-            model="gpt-4",
+        final_response = openai.ChatCompletion.create(
+            model="gpt-4o",
             messages=[
-                {"role": "system", "content": "你是一個分析對話語氣的專家。"},
+                {
+                    "role": "system",
+                    "content": (
+                        "請根據歷史對話記錄學習用戶的說話風格，並用類似的語氣進行回應，避免不合理的回覆。"
+                        "回答應該自然、親近，像親密好友一樣表現出關心和支持。避免用正式的語氣，使用日常對話中的語言。"
+                    ),
+                },
                 {"role": "user", "content": prompt},
             ],
+            temperature=0.8,
         )
-        return openai_response["choices"][0]["message"]["content"].strip()
+
+        return final_response["choices"][0]["message"]["content"]
+
+        
     except Exception as e:
         print(f"Error in OpenAI API: {e}")
         return response

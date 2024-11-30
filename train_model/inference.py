@@ -6,7 +6,10 @@ import pandas as pd
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
 from repository.trainingfile_repo import TrainingFileRepo
+from train_model.trim import analyze_and_modify_response
 from typing import List
+from utils import chroma
+
 
 model_cache = {}
 model_usage_counter = {}
@@ -156,6 +159,12 @@ def inference(
         # chat.append(f"User: {user_context}")
         # chat.append(f"Assistant: {assistant_context}")
 
+        rag_content = chroma.retrive_n_results(user_id=user_id, query_texts=input_text)
+
+        if rag_content:
+            chat.append("System: 以下是檢索到的相關內容，如果對話提及相關內容可以參考：")
+            chat.append(rag_content)
+
         chat.append(f"User: {input_text}")
         chat.append("Assistant:")
 
@@ -175,7 +184,7 @@ def inference(
                         input_ids=inputs["input_ids"],
                         attention_mask=inputs["attention_mask"],
                         do_sample=True,
-                        max_length=128,
+                        max_length=64,
                         top_k=30,
                         top_p=0.85,
                         temperature=0.7,
@@ -219,6 +228,7 @@ def inference(
                         "[Assistant]",
                         "Assistant",
                         "\\n:",
+                        "\\",
                         ":",
                         "[你]",
                         "[我]",
@@ -241,6 +251,7 @@ def inference(
                         line for line in generated_text.splitlines() if line.strip()
                     )
 
+                    generated_text = analyze_and_modify_response(input_text,generated_text,chat)
                     responses.append(generated_text)
 
                     if any(responses):
@@ -254,7 +265,7 @@ def inference(
                     f"[ERROR] CUDA Out of Memory during attempt {attempt + 1}. Cleaning up..."
                 )
                 torch.cuda.empty_cache()
-                time.sleep(5)
+                time.sleep(2)
             except Exception as e:
                 if "524" in str(e):
                     print(
