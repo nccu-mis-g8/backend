@@ -91,7 +91,7 @@ def limit_stickers(text: str) -> str:
 
 
 def inference(
-    model_dir: str, input_text: str, user_id: str, max_retries: int = 3
+    model_dir: str, input_text: str, user_id: str, session_history:List[dict],max_retries: int = 3
 ) -> List[str] | None:
     try:
         greetings = [
@@ -123,7 +123,6 @@ def inference(
             "good evening",
         ]
 
-        # 如果輸入屬於招呼語，返回相同的招呼語
         if input_text.lower().strip() in [greet.lower() for greet in greetings]:
             delay_seconds = random.uniform(3, 7)
             time.sleep(delay_seconds)
@@ -131,6 +130,17 @@ def inference(
 
         model, tokenizer = load_model_for_user(model_dir, user_id)
 
+        prompt = []
+        prompt.append("<<SYS>>")
+        prompt.append(
+            "這是系統消息，用於告訴模型如何處理這次請求：\n"
+            "1. 歷史資料是用來學習語氣和風格，無需直接回應。\n"
+            "2. 最近的對話是用來記住上下文，請在生成回應時參考。\n"
+            "3. RAG 檢索結果是輔助資訊，可以根據需要引用。"
+        )
+        prompt.append("<</SYS>>")
+
+        prompt.append("<<HISTORY>>")
         chat = []
         user_history = TrainingFileRepo.find_trainingfile_by_user_id(user_id=user_id)
         if isinstance(user_history, list) and user_history:
@@ -148,30 +158,50 @@ def inference(
                 df_sample = df
 
             for _, row in df_sample.iterrows():
+                prompt.append(f"User: {row['input']}")
+                prompt.append(f"Assistant: {row['output']}")
                 chat.append(f"User: {row['input']}")
                 chat.append(f"Assistant: {row['output']}")
+        prompt.append("<</HISTORY>>")
+        
+        prompt.append("<<CONTEXT>>")
+        if session_history:
+            for dialogue in session_history:
+                prompt.append(f"User: {dialogue['user']}")
+                prompt.append(f"Assistant: {dialogue['model']}")
+        prompt.append("<</CONTEXT>>")
 
-        # 先前對話
-        # sys_context = "這是之前的對話紀錄，請根據對話紀錄進行回覆"
-        # user_context = "要不要一起吃飯？"
-        # assistant_context = "吃甚麼？"
-        # chat.append(f"System: {sys_context}")
-        # chat.append(f"User: {user_context}")
-        # chat.append(f"Assistant: {assistant_context}")
-
+        prompt.append("<<RAG>>")
         rag_content = chroma.retrive_n_results(user_id=user_id, query_texts=input_text)
-
         if rag_content:
-            chat.append("System: 以下是檢索到的相關內容，如果對話提及相關內容可以參考：")
-            chat.append(rag_content)
+            prompt.append(f"以下是檢索到的相關內容，如果對話提及相關內容可以參考：\n{rag_content}")
+        prompt.append("<</RAG>>")
 
-        chat.append(f"User: {input_text}")
-        chat.append("Assistant:")
 
-        prompt = "\n".join(chat)
+        # if session_history:
+        #     print(f"[INFO] Adding user's session history (last {len(session_history)} turns).")
+
+        # # 先前對話
+        # # sys_context = "這是之前的對話紀錄，請根據對話紀錄進行回覆"
+        # # user_context = "要不要一起吃飯？"
+        # # assistant_context = "吃甚麼？"
+        # # chat.append(f"System: {sys_context}")
+        # # chat.append(f"User: {user_context}")
+        # # chat.append(f"Assistant: {assistant_context}")
+
+        # rag_content = chroma.retrive_n_results(user_id=user_id, query_texts=input_text)
+
+        # if rag_content:
+        #     chat.append("System: 以下是檢索到的相關內容，如果對話提及相關內容可以參考：")
+        #     chat.append(rag_content)
+
+        # chat.append(f"User: {input_text}")
+        # chat.append("Assistant:")
+
+        full_prompt = "\n".join(prompt)
 
         inputs = tokenizer(
-            prompt, return_tensors="pt", padding=True, truncation=True, max_length=256
+            full_prompt, return_tensors="pt", padding=True, truncation=True, max_length=256
         ).to(model.device)
 
         for attempt in range(max_retries):
@@ -184,7 +214,8 @@ def inference(
                         input_ids=inputs["input_ids"],
                         attention_mask=inputs["attention_mask"],
                         do_sample=True,
-                        max_length=64,
+                        # max_length=150, 
+                        max_new_tokens=50,
                         top_k=30,
                         top_p=0.85,
                         temperature=0.7,

@@ -288,8 +288,17 @@ def chat():
     if not input_text:
         return jsonify({"error": "Input text is required"}), 400
 
+    # session_history
+    history_json = request.form.get("session_history", "[]") 
     try:
-        responses = inference(model_dir, input_text, user.id)
+        session_history = json.loads(history_json) 
+        if not isinstance(session_history, list): 
+            return jsonify({"error": "Invalid session_history format. Must be a list."}), 400
+    except json.JSONDecodeError:
+        return jsonify({"error": "Invalid session_history JSON"}), 400
+    
+    try:
+        responses = inference(model_dir, input_text, user.id, session_history)
 
         if responses is None:
             return jsonify({"error": "Inference failed"}), 500

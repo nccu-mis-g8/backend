@@ -67,4 +67,4 @@ def retrive_n_results(user_id, query_texts, n_results=3):
     
     return content
 
-print(retrive_n_results(57, "文化日活動",1))
+# print(retrive_n_results(57, "文化日活動",1))
