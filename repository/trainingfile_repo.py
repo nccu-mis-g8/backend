@@ -7,8 +7,15 @@ import logging
 
 class TrainingFileRepo:
     @staticmethod
-    def create_trainingfile(user_id, model_id, original_file_name, filename=None) -> Optional[TrainingFile]:
-        file = TrainingFile(user_id=user_id, model_id=model_id, original_file_name=original_file_name, filename=filename)
+    def create_trainingfile(
+        user_id, model_id, original_file_name, filename=None
+    ) -> Optional[TrainingFile]:
+        file = TrainingFile(
+            user_id=user_id,
+            model_id=model_id,
+            original_file_name=original_file_name,
+            filename=filename,
+        )
         db.session.add(file)
         try:
             db.session.commit()
@@ -39,10 +46,19 @@ class TrainingFileRepo:
     @staticmethod
     def find_first_training_file_by_user_id(user_id) -> Optional[TrainingFile]:
         return TrainingFile.query.filter_by(user_id=user_id).first()
-    
+
     @staticmethod
-    def find_first_training_file_by_user_and_model_id(user_id, model_id) -> Optional[TrainingFile]:
+    def find_first_training_file_by_user_and_model_id(
+        user_id, model_id
+    ) -> Optional[TrainingFile]:
         return TrainingFile.query.filter_by(user_id=user_id, model_id=model_id).first()
+
+    # 上傳時就的file會覆蓋舊的file，所以這個array永遠只會有一個items
+    @staticmethod
+    def find_training_file_by_user_and_model_id(
+        user_id, model_id
+    ) -> list[TrainingFile]:
+        return TrainingFile.query.filter_by(user_id=user_id, model_id=model_id).all()
 
     @staticmethod
     def delete_training_file_by_file_id(file_id):
@@ -52,7 +68,7 @@ class TrainingFileRepo:
         except Exception as e:
             db.session.rollback()
             logging.error(f"Error delete training_file for file {file_id}: {e}")
-            
+
     @staticmethod
     def delete_training_file_by_user_and_model_id(user_id: int, model_id: int) -> bool:
         try:
@@ -63,7 +79,6 @@ class TrainingFileRepo:
             db.session.rollback()
             logging.error(f"Error deleting training files for model {model_id}: {e}")
             return False
-
 
     @staticmethod
     def save_training_file():

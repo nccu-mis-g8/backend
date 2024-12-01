@@ -4,9 +4,11 @@ from flasgger import swag_from
 import logging
 import json
 from flask_jwt_extended import get_jwt_identity, jwt_required
+from werkzeug.wrappers import response
 
 
 from models.trained_model import TrainedModel
+from models.training_file import TrainingFile
 from models.user import User
 from repository.shared_model_repo import SharedModelRepo
 from repository.trainedmodel_repo import TrainedModelRepo
@@ -369,7 +371,9 @@ def share_model():
     # parameter
     modelname = request.form.get("modelname")
     #
-    model = TrainedModel.query.filter_by(modelname=modelname).first()
+    model = TrainedModelRepo.find_trainedmodel_by_user_and_modelname(
+        user_id=user.id, modelname=modelname
+    )
     if model is None:
         return jsonify(message="無法找到模型"), 404
     if model.user_id != user.id:
@@ -432,3 +436,86 @@ def get_shared_model(link: str):
         return jsonify(message=res["msg"]), 200
     # 失敗
     return jsonify(message=res["msg"]), 404
+
+
+@train_model_bp.route("/model/status", methods=["POST"])
+@jwt_required()
+@swag_from(
+    {
+        "tags": ["Model Sharing"],
+        "description": "取得模型的訓練狀態",
+        "parameters": [
+            {
+                "name": "Authorization",
+                "in": "header",
+                "type": "string",
+                "required": True,
+                "schema": {"type": "string", "example": "Bearer "},
+            },
+            {
+                "name": "modelname",
+                "in": "formData",
+                "type": "string",
+                "required": True,
+                "description": "The name of the trained model to be shared",
+            },
+        ],
+        "responses": {
+            "200": {
+                "description": "Successfully retrieved model access",
+                "examples": {
+                    "application/json": {
+                        "message": "成功取得modelname為<modelname>的模型的訓練狀態",
+                        "result": "訓練中",
+                        "start": True,
+                        "finish": False,
+                    }
+                },
+            },
+            "404": {
+                "description": "User or shared model not found, or user does not have access",
+                "examples": {"application/json": {"message": "無法取得模型訓練狀態"}},
+            },
+        },
+    }
+)
+def get_model_training_status():
+    current_email = get_jwt_identity()
+
+    # 從資料庫中查詢使用者
+    user = User.get_user_by_email(current_email)
+    if user is None:
+        return jsonify(message="使用者不存在"), 404
+    modelname = request.form.get("modelname")
+    model = TrainedModelRepo.find_trainedmodel_by_user_and_modelname(
+        user_id=user.id, modelname=modelname
+    )
+    if model is None:
+        return jsonify(message="無法找到模型"), 404
+    training_file: Optional[
+        TrainingFile
+    ] = TrainingFileRepo.find_first_training_file_by_user_and_model_id(
+        user_id=user.id, model_id=model.id
+    )
+    response_data = {
+        "result": "",
+        "start": False,
+        "finish": False,
+        "msg": f"成功取得modelname為{model.modelname}的模型的訓練狀態",
+    }
+    if training_file is None:
+        response_data["result"] = "沒有訓練資料"
+    elif training_file.start_train and not training_file.is_trained:
+        response_data["result"] = "訓練中"
+        response_data["start"] = True
+    elif training_file.start_train and training_file.is_trained:
+        response_data["result"] = "已完成訓練"
+        response_data["start"] = True
+        response_data["finish"] = True
+    return (
+        Response(
+            json.dumps(response_data, ensure_ascii=False),
+            content_type="application/json; charset=utf-8",
+        ),
+        200,
+    )
