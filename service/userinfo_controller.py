@@ -141,7 +141,9 @@ def upload_photo():
             os.makedirs(user_folder)
 
         file.save(os.path.join(user_folder, saved_file.photoname))
-        return jsonify({"message": "File uploaded successfully"}), 200
+        return jsonify({"message": "File uploaded successfully",
+                        "user_avatar": f"{BASE_URL}/userinfo/images/{user.id}/{saved_file.photoname}"}
+                        ), 200
     else:
         return (
             jsonify(
