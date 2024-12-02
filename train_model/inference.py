@@ -79,14 +79,6 @@ def limit_stickers(text: str) -> str:
     if len(sticker_tokens) > max_stickers:
         text = "[貼圖]".join(sticker_tokens[:max_stickers]) + sticker_tokens[max_stickers]
 
-    post_tokens = text.split("[貼文]")
-    if len(post_tokens) > max_posts:
-        text = "[貼文]".join(post_tokens[:max_posts]) + post_tokens[max_posts]
-
-    photo_tokens = text.split("[照片]")
-    if len(photo_tokens) > max_photos:
-        text = "[照片]".join(photo_tokens[:max_photos]) + photo_tokens[max_photos]
-
     return text
 
 
@@ -130,17 +122,6 @@ def inference(
 
         model, tokenizer = load_model_for_user(model_dir, user_id)
 
-        prompt = []
-        prompt.append("<<SYS>>")
-        prompt.append(
-            "這是系統消息，用於告訴模型如何處理這次請求：\n"
-            "1. 歷史資料是用來學習語氣和風格，無需直接回應。\n"
-            "2. 最近的對話是用來記住上下文，請在生成回應時參考。\n"
-            "3. RAG 檢索結果是輔助資訊，可以根據需要引用。"
-        )
-        prompt.append("<</SYS>>")
-
-        prompt.append("<<HISTORY>>")
         chat = []
         user_history = TrainingFileRepo.find_trainingfile_by_user_id(user_id=user_id)
         if isinstance(user_history, list) and user_history:
@@ -158,50 +139,28 @@ def inference(
                 df_sample = df
 
             for _, row in df_sample.iterrows():
-                prompt.append(f"User: {row['input']}")
-                prompt.append(f"Assistant: {row['output']}")
                 chat.append(f"User: {row['input']}")
                 chat.append(f"Assistant: {row['output']}")
-        prompt.append("<</HISTORY>>")
-        
-        prompt.append("<<CONTEXT>>")
-        if session_history:
-            for dialogue in session_history:
-                prompt.append(f"User: {dialogue['user']}")
-                prompt.append(f"Assistant: {dialogue['model']}")
-        prompt.append("<</CONTEXT>>")
 
-        prompt.append("<<RAG>>")
+        # 先前對話
+        # sys_context = "這是之前的對話紀錄，請根據對話紀錄進行回覆"
+        # user_context = "要不要一起吃飯？"
+        # assistant_context = "吃甚麼？"
+        # chat.append(f"System: {sys_context}")
+        # chat.append(f"User: {user_context}")
+        # chat.append(f"Assistant: {assistant_context}")
+
         rag_content = chroma.retrive_n_results(user_id=user_id, query_texts=input_text)
         if rag_content:
-            prompt.append(f"以下是檢索到的相關內容，如果對話提及相關內容可以參考：\n{rag_content}")
-        prompt.append("<</RAG>>")
+            chat.append("System: 以下是檢索到跟使用者相關內容，如果對話提及相關話題可以參考：")
+            chat.append(rag_content)
+        chat.append(f"User: {input_text}")
+        chat.append("Assistant:")
 
-
-        # if session_history:
-        #     print(f"[INFO] Adding user's session history (last {len(session_history)} turns).")
-
-        # # 先前對話
-        # # sys_context = "這是之前的對話紀錄，請根據對話紀錄進行回覆"
-        # # user_context = "要不要一起吃飯？"
-        # # assistant_context = "吃甚麼？"
-        # # chat.append(f"System: {sys_context}")
-        # # chat.append(f"User: {user_context}")
-        # # chat.append(f"Assistant: {assistant_context}")
-
-        # rag_content = chroma.retrive_n_results(user_id=user_id, query_texts=input_text)
-
-        # if rag_content:
-        #     chat.append("System: 以下是檢索到的相關內容，如果對話提及相關內容可以參考：")
-        #     chat.append(rag_content)
-
-        # chat.append(f"User: {input_text}")
-        # chat.append("Assistant:")
-
-        full_prompt = "\n".join(prompt)
+        prompt = "\n".join(chat)
 
         inputs = tokenizer(
-            full_prompt, return_tensors="pt", padding=True, truncation=True, max_length=256
+            prompt, return_tensors="pt", padding=True, truncation=True, max_length=256
         ).to(model.device)
 
         for attempt in range(max_retries):
@@ -271,6 +230,8 @@ def inference(
                         "/",
                         "(null)",
                         "null",
+                        "[貼文]",
+                        "[照片]"
                     ]
                     for tag in tags_to_remove:
                         generated_text = generated_text.replace(tag, "").strip()
@@ -282,8 +243,9 @@ def inference(
                         line for line in generated_text.splitlines() if line.strip()
                     )
 
-                    generated_text = analyze_and_modify_response(input_text,generated_text,chat)
+                    generated_text = analyze_and_modify_response(input_text,generated_text,chat,session_history)
                     responses.append(generated_text)
+
 
                     if any(responses):
                         return responses

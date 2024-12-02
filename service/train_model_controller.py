@@ -183,9 +183,10 @@ def start_train(id: str, model_dir: str, save_dir: str, data_path: str):
         這個 API 用來與已訓練模型進行聊天。它接收使用者的輸入文本並返回模型的生成回應。
 
         Input:
-        - `Authorization` header 必須包含 Bearer token 以進行身份驗證。
+        - Authorization header 必須包含 Bearer token 以進行身份驗證。
         - user_info: 包含使用者的基本訊息 (例如 user_Id)。
         - input_text: 使用者的聊天輸入。
+        - session_history: JSON 格式的對話歷史，包含最近幾次的用戶輸入與模型回應。
 
         Returns:
         - JSON 回應訊息：
@@ -221,6 +222,15 @@ def start_train(id: str, model_dir: str, save_dir: str, data_path: str):
                 "description": "使用者的聊天輸入文本",
                 "required": True,
             },
+            {
+                "name": "session_history",
+                "in": "formData",
+                "type": "string",
+                "description": """JSON 格式的對話歷史，包含最近幾次的用戶輸入與模型回應。
+                例如：[{"user": "哈囉", "model": "哈囉"},{"user": "你起床了嗎", "model": "剛起來怎麼嘞"}]
+                """,
+                "required": False,
+            }
         ],
         "responses": {
             200: {
