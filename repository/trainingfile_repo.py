@@ -91,4 +91,3 @@ class TrainingFileRepo:
         except Exception as e:
             db.session.rollback()
             logging.error(f"Error updating file: {e}")
-            return None
