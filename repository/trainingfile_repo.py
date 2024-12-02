@@ -30,6 +30,10 @@ class TrainingFileRepo:
         return TrainingFile.query.all()
 
     @staticmethod
+    def find_training_file_by_id(id) -> Optional[TrainingFile]:
+        return TrainingFile.query.filter_by(id=id).first()
+
+    @staticmethod
     def find_trainingfile_by_user_id(user_id) -> List[TrainingFile]:
         return TrainingFile.query.filter_by(user_id=user_id).all()
 

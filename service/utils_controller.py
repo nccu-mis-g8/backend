@@ -473,7 +473,8 @@ def get_model_status(model_Id):
                 user.id, model_Id
             )
         )
-        if not training_file_status:
+
+        if training_file_status is None:
             return jsonify({"message": "No training files found for this user."}), 404
 
     except Exception as e:

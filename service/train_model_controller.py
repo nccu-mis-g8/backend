@@ -155,9 +155,6 @@ def train_model():
                 ),
             ).start()
 
-        training_file.is_trained = True
-        TrainingFileRepo.save_training_file()
-
         return (
             jsonify(
                 {
@@ -172,8 +169,10 @@ def train_model():
         return jsonify({"status": "Error", "message": str(e)}), 500
 
 
-def start_train(id: str, model_dir: str, save_dir: str, data_path: str):
-    train(id, model_dir, save_dir, data_path)
+def start_train(
+    id: str, training_file_id: str, model_dir: str, save_dir: str, data_path: str
+):
+    train(id, training_file_id, model_dir, save_dir, data_path)
 
 
 @train_model_bp.post("/chat")

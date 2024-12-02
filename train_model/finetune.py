@@ -15,6 +15,9 @@ import pandas as pd
 import torch
 import gc
 
+
+from repository.trainingfile_repo import TrainingFileRepo
+
 CUTOFF_LEN = 512
 
 BASE_MODEL_DIR = "./train_model/saved-taide-model"
@@ -60,7 +63,9 @@ def generate_prompt(data_point):
     return prompt + " " + output_text.strip() + "</s>"
 
 
-def train(id: str, model_dir: str, save_dir: str, data_path: str):
+def train(
+    id: str, training_file_id: str, model_dir: str, save_dir: str, data_path: str
+):
     device_map = "auto" if torch.cuda.is_available() else "cpu"
     nf4_config = BitsAndBytesConfig(
         load_in_4bit=True,
@@ -132,6 +137,10 @@ def train(id: str, model_dir: str, save_dir: str, data_path: str):
     print("[INFO] Saving model and tokenizer...")
     model.save_pretrained(save_dir)
     tokenizer.save_pretrained(save_dir)
+    training_file = TrainingFileRepo.find_training_file_by_id(training_file_id)
+    if training_file is not None:
+        training_file.is_trained = True
+        TrainingFileRepo.save_training_file()
     # model.config.save_pretrained(save_dir)
 
     cleanup_model(model)
