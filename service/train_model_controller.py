@@ -136,6 +136,7 @@ def train_model():
                 target=start_train,
                 args=(
                     str(trained_model.id),
+                    training_file.id,
                     BASE_MODEL_DIR,
                     model_path,
                     os.path.join(FILE_DIRECTORY, file_path),
@@ -149,6 +150,7 @@ def train_model():
                 target=start_train,
                 args=(
                     str(trained_model.id),
+                    training_file.id,
                     os.path.join("..\\saved_models", last_model.modelname),
                     model_path,
                     os.path.join(FILE_DIRECTORY, file_path),
@@ -170,7 +172,7 @@ def train_model():
 
 
 def start_train(
-    id: str, training_file_id: str, model_dir: str, save_dir: str, data_path: str
+    id: str, training_file_id: int, model_dir: str, save_dir: str, data_path: str
 ):
     train(id, training_file_id, model_dir, save_dir, data_path)
 
@@ -231,7 +233,7 @@ def start_train(
                 例如：[{"user": "哈囉", "model": "哈囉"},{"user": "你起床了嗎", "model": "剛起來怎麼嘞"}]
                 """,
                 "required": False,
-            }
+            },
         ],
         "responses": {
             200: {
@@ -300,14 +302,17 @@ def chat():
         return jsonify({"error": "Input text is required"}), 400
 
     # session_history
-    history_json = request.form.get("session_history", "[]") 
+    history_json = request.form.get("session_history", "[]")
     try:
-        session_history = json.loads(history_json) 
-        if not isinstance(session_history, list): 
-            return jsonify({"error": "Invalid session_history format. Must be a list."}), 400
+        session_history = json.loads(history_json)
+        if not isinstance(session_history, list):
+            return (
+                jsonify({"error": "Invalid session_history format. Must be a list."}),
+                400,
+            )
     except json.JSONDecodeError:
         return jsonify({"error": "Invalid session_history JSON"}), 400
-    
+
     try:
         responses = inference(model_dir, input_text, user.id, session_history)
 

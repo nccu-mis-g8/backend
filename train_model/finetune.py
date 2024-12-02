@@ -65,7 +65,7 @@ def generate_prompt(data_point):
 
 
 def train(
-    id: str, training_file_id: str, model_dir: str, save_dir: str, data_path: str
+    id: str, training_file_id: int, model_dir: str, save_dir: str, data_path: str
 ):
     device_map = "auto" if torch.cuda.is_available() else "cpu"
     nf4_config = BitsAndBytesConfig(
