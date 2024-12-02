@@ -29,6 +29,8 @@ class TrainingFile(db.Model):
         self.original_file_name = original_file_name
         self.start_train = False
         self.is_trained = False
+        self.error_msg = False
+        
 
     def set_start_train(self, start_train: bool):
         self.start_train = start_train

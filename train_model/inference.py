@@ -6,7 +6,10 @@ import pandas as pd
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
 from repository.trainingfile_repo import TrainingFileRepo
+from train_model.trim import analyze_and_modify_response
 from typing import List
+from utils import chroma
+
 
 model_cache = {}
 model_usage_counter = {}
@@ -67,28 +70,16 @@ def load_model_for_user(model_dir: str, user_id: str):
 
 
 def limit_stickers(text: str) -> str:
-    # 限制貼圖、貼文、照片的數量
     max_stickers = 2
-    max_posts = 2
-    max_photos = 2
-
     sticker_tokens = text.split("[貼圖]")
     if len(sticker_tokens) > max_stickers:
         text = "[貼圖]".join(sticker_tokens[:max_stickers]) + sticker_tokens[max_stickers]
-
-    post_tokens = text.split("[貼文]")
-    if len(post_tokens) > max_posts:
-        text = "[貼文]".join(post_tokens[:max_posts]) + post_tokens[max_posts]
-
-    photo_tokens = text.split("[照片]")
-    if len(photo_tokens) > max_photos:
-        text = "[照片]".join(photo_tokens[:max_photos]) + photo_tokens[max_photos]
 
     return text
 
 
 def inference(
-    model_dir: str, input_text: str, user_id: str, max_retries: int = 3
+    model_dir: str, input_text: str, user_id: str, session_history:List[dict],max_retries: int = 3
 ) -> List[str] | None:
     try:
         greetings = [
@@ -120,7 +111,6 @@ def inference(
             "good evening",
         ]
 
-        # 如果輸入屬於招呼語，返回相同的招呼語
         if input_text.lower().strip() in [greet.lower() for greet in greetings]:
             delay_seconds = random.uniform(3, 7)
             time.sleep(delay_seconds)
@@ -148,14 +138,10 @@ def inference(
                 chat.append(f"User: {row['input']}")
                 chat.append(f"Assistant: {row['output']}")
 
-        # 先前對話
-        # sys_context = "這是之前的對話紀錄，請根據對話紀錄進行回覆"
-        # user_context = "要不要一起吃飯？"
-        # assistant_context = "吃甚麼？"
-        # chat.append(f"System: {sys_context}")
-        # chat.append(f"User: {user_context}")
-        # chat.append(f"Assistant: {assistant_context}")
-
+        rag_content = chroma.retrive_n_results(user_id=user_id, query_texts=input_text)
+        if rag_content:
+            chat.append("System: 以下是檢索到跟使用者相關內容，如果對話提及相關話題可以參考：")
+            chat.append(rag_content)
         chat.append(f"User: {input_text}")
         chat.append("Assistant:")
 
@@ -175,7 +161,8 @@ def inference(
                         input_ids=inputs["input_ids"],
                         attention_mask=inputs["attention_mask"],
                         do_sample=True,
-                        max_length=128,
+                        # max_length=150, 
+                        max_new_tokens=50,
                         top_k=30,
                         top_p=0.85,
                         temperature=0.7,
@@ -219,6 +206,7 @@ def inference(
                         "[Assistant]",
                         "Assistant",
                         "\\n:",
+                        "\\",
                         ":",
                         "[你]",
                         "[我]",
@@ -230,6 +218,8 @@ def inference(
                         "/",
                         "(null)",
                         "null",
+                        "[貼文]",
+                        "[照片]"
                     ]
                     for tag in tags_to_remove:
                         generated_text = generated_text.replace(tag, "").strip()
@@ -241,7 +231,9 @@ def inference(
                         line for line in generated_text.splitlines() if line.strip()
                     )
 
+                    generated_text = analyze_and_modify_response(input_text,generated_text,chat,session_history)
                     responses.append(generated_text)
+
 
                     if any(responses):
                         return responses
@@ -254,7 +246,7 @@ def inference(
                     f"[ERROR] CUDA Out of Memory during attempt {attempt + 1}. Cleaning up..."
                 )
                 torch.cuda.empty_cache()
-                time.sleep(5)
+                time.sleep(2)
             except Exception as e:
                 if "524" in str(e):
                     print(
