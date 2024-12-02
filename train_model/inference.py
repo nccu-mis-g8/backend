@@ -70,11 +70,7 @@ def load_model_for_user(model_dir: str, user_id: str):
 
 
 def limit_stickers(text: str) -> str:
-    # 限制貼圖、貼文、照片的數量
     max_stickers = 2
-    max_posts = 2
-    max_photos = 2
-
     sticker_tokens = text.split("[貼圖]")
     if len(sticker_tokens) > max_stickers:
         text = "[貼圖]".join(sticker_tokens[:max_stickers]) + sticker_tokens[max_stickers]
@@ -141,14 +137,6 @@ def inference(
             for _, row in df_sample.iterrows():
                 chat.append(f"User: {row['input']}")
                 chat.append(f"Assistant: {row['output']}")
-
-        # 先前對話
-        # sys_context = "這是之前的對話紀錄，請根據對話紀錄進行回覆"
-        # user_context = "要不要一起吃飯？"
-        # assistant_context = "吃甚麼？"
-        # chat.append(f"System: {sys_context}")
-        # chat.append(f"User: {user_context}")
-        # chat.append(f"Assistant: {assistant_context}")
 
         rag_content = chroma.retrive_n_results(user_id=user_id, query_texts=input_text)
         if rag_content:
