@@ -32,8 +32,23 @@ class TrainedModelRepo:
 
     @staticmethod
     def start_trainedmodel(user_id, model_id) -> Optional[TrainedModel]:
-        model = TrainedModel.query.filter_by(user_id=user_id, id=model_id).first()
+        model: Optional[TrainedModel] = TrainedModel.query.filter_by(
+            user_id=user_id, id=model_id
+        ).first()
+        if model is None:
+            return None
         model.start_time = db.func.now()
+        TrainedModelRepo.save()
+        return model
+
+    @staticmethod
+    def end_trainedmodel(model_id) -> Optional[TrainedModel]:
+        model: Optional[TrainedModel] = TrainedModel.query.filter_by(
+            id=model_id
+        ).first()
+        if model is None:
+            return None
+        model.end_time = db.func.now()
         TrainedModelRepo.save()
         return model
 

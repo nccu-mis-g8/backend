@@ -16,6 +16,7 @@ import torch
 import gc
 
 
+from repository.trainedmodel_repo import TrainedModelRepo
 from repository.trainingfile_repo import TrainingFileRepo
 
 CUTOFF_LEN = 512
@@ -141,6 +142,7 @@ def train(
     if training_file is not None:
         training_file.is_trained = True
         TrainingFileRepo.save_training_file()
+    TrainedModelRepo.end_trainedmodel(id)
     # model.config.save_pretrained(save_dir)
 
     cleanup_model(model)
