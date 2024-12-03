@@ -177,7 +177,7 @@ def train_model():
 def start_train(
     app, id: str, training_file_id: int, model_dir: str, save_dir: str, data_path: str
 ):
-    with app.app_context():
+    with app:
         train(id, training_file_id, model_dir, save_dir, data_path)
 
 
