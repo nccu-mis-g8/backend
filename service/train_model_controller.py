@@ -1,5 +1,5 @@
 from typing import Optional
-from flask import Blueprint, request, Response, jsonify
+from flask import Blueprint, current_app, request, Response, jsonify
 from flasgger import swag_from
 import logging
 import json
@@ -129,12 +129,14 @@ def train_model():
 
         model_path = os.path.join("..\\saved_models", trained_model.modelname)
         print(model_path)
+        app = current_app.app_context()
         # 如果是第一次训练
         if len(saved_models) == 0 or str(trained_model.id) == model_id:
             print("第一次訓練")
             threading.Thread(
                 target=start_train,
                 args=(
+                    app,
                     str(trained_model.id),
                     training_file.id,
                     BASE_MODEL_DIR,
@@ -149,6 +151,7 @@ def train_model():
             threading.Thread(
                 target=start_train,
                 args=(
+                    app,
                     str(trained_model.id),
                     training_file.id,
                     os.path.join("..\\saved_models", last_model.modelname),
@@ -172,9 +175,10 @@ def train_model():
 
 
 def start_train(
-    id: str, training_file_id: int, model_dir: str, save_dir: str, data_path: str
+    app, id: str, training_file_id: int, model_dir: str, save_dir: str, data_path: str
 ):
-    train(id, training_file_id, model_dir, save_dir, data_path)
+    with app.app_context():
+        train(id, training_file_id, model_dir, save_dir, data_path)
 
 
 @train_model_bp.post("/chat")
