@@ -298,8 +298,9 @@ def chat():
     )
 
     if not os.path.exists(model_dir):
-        return jsonify({"error": "Model directory not found"}), 404
-
+        # return jsonify({"error": "Model directory not found"}), 404
+        model_dir = BASE_MODEL_DIR
+    
     input_text = request.form.get("input_text", "")
 
     if not input_text:

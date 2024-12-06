@@ -54,8 +54,14 @@ def load_model_for_user(model_dir: str, user_id: str):
 
     print(f"[INFO] Loading model for user_id: {user_id}")
     model = AutoModelForCausalLM.from_pretrained(model_dir)
-    if not hasattr(model, "peft_config"):
+
+   
+    adapter_config_path = os.path.join(model_dir, "adapter_config.json")
+    if os.path.exists(adapter_config_path):
         model = PeftModel.from_pretrained(model, model_dir)
+    else:
+        print(f"No PEFT adapter found in {model_dir}. Loading base model.")
+
     model.to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
     model.eval()
 
