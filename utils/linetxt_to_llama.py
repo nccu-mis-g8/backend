@@ -2,6 +2,7 @@ import csv
 import os
 import uuid
 
+
 class LineChatProcessor:
     def __init__(self, output_name, master_name="", data_dir=""):
         self.master_name = master_name
@@ -32,7 +33,7 @@ class LineChatProcessor:
                 continue
             if line.endswith("已收回訊息"):
                 continue
-            w = line.split("\t") 
+            w = line.split("\t")
             if len(w) < 3:
                 continue
             if "收回訊息" in w[2]:
@@ -48,7 +49,7 @@ class LineChatProcessor:
                     instruction = ""
                     input = ""
                     output = ""
-                instruction += w[2]
+                input += w[2]
                 pre_is_master = False
 
     def output_file(self, instructions_list, inputs_list, outputs_list):
@@ -64,18 +65,18 @@ class LineChatProcessor:
 
         if not os.path.exists(self.data_dir):
             os.makedirs(self.data_dir, exist_ok=True)
-        
+
         output_file_path = os.path.join(self.data_dir, self.output_file_name)
-        
-        with open(output_file_path, "w", encoding="utf-8", newline='') as writer_file:
+
+        with open(output_file_path, "w", encoding="utf-8", newline="") as writer_file:
             fieldnames = ["instruction", "input", "output", "text"]
             writer = csv.DictWriter(writer_file, fieldnames=fieldnames)
             writer.writeheader()
 
-            for i in range(len(instructions_list)):
+            for i in range(len(inputs_list)):
                 writer.writerow(
                     {
-                        "input": instructions_list[i],
+                        "input": inputs_list[i],
                         "output": outputs_list[i],
                         "instruction": block_title,
                     }
@@ -83,7 +84,8 @@ class LineChatProcessor:
 
         return self.output_file_name
 
-    
     def process(self, file):
         self.create_formatted_content(file)
-        return self.output_file(self.instructions_list, self.inputs_list, self.outputs_list)
+        return self.output_file(
+            self.instructions_list, self.inputs_list, self.outputs_list
+        )
