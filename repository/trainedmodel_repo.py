@@ -98,7 +98,7 @@ class TrainedModelRepo:
     @staticmethod
     def delete_trainedmodel_by_user_and_model_id(user_id: int, model_id: int) -> bool:
         model = TrainedModel.query.filter_by(user_id=user_id, id=model_id).first()
-        if model:
+        if model is not None:
             db.session.delete(model)
             db.session.commit()
             return True

@@ -18,7 +18,8 @@ logger = logging.getLogger(__name__)
 FILE_DIRECTORY = os.path.abspath("..\\user_photo_file")
 TRAINING_FILE_DIRECTORY = os.path.abspath("..\\training_file")
 # BASE_URL = "http://192.168.1.109:8080" # 安的IP
-BASE_URL = "https://nccu-group-8.work"   # 主機IP
+BASE_URL = "https://nccu-group-8.work"  # 主機IP
+
 
 def allowed_file(filename, extensions):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in extensions
@@ -141,9 +142,15 @@ def upload_photo():
             os.makedirs(user_folder)
 
         file.save(os.path.join(user_folder, saved_file.photoname))
-        return jsonify({"message": "File uploaded successfully",
-                        "user_avatar": f"{BASE_URL}/userinfo/images/{user.id}/{saved_file.photoname}"}
-                        ), 200
+        return (
+            jsonify(
+                {
+                    "message": "File uploaded successfully",
+                    "user_avatar": f"{BASE_URL}/userinfo/images/{user.id}/{saved_file.photoname}",
+                }
+            ),
+            200,
+        )
     else:
         return (
             jsonify(
@@ -175,7 +182,7 @@ def upload_photo():
 #                 "description": "Bearer token for authorization",
 #                 "schema": {"type": "string", "example": "Bearer "},
 #             },
-            
+
 #         ],
 #         "responses": {
 #             200: {
@@ -275,7 +282,7 @@ def get_image(id, photoname):
         file_path = os.path.join(FILE_DIRECTORY, "default", photoname)
     else:
         file_path = os.path.join(FILE_DIRECTORY, str(id), photoname)
-        
+
     if not os.path.exists(file_path):
         default_image_path = os.path.join(FILE_DIRECTORY, "default", "avatar.png")
         if os.path.exists(default_image_path):
@@ -432,111 +439,116 @@ def create_model():
                 ),
                 400,
             )
-            
-            
+
+
 @userinfo_bp.delete("/user/delete_model/<int:model_id>")
 @jwt_required()
-@swag_from({
-    'tags': ['UserInfo'],
-    'description': 'Delete a user’s model and all associated files based on the model ID.',
-    'parameters': [
-        {
-            "name": "Authorization",
-            "in": "header",
-            "required": True,
-            "description": "Bearer token for authorization",
-            "schema": {"type": "string", "example": "Bearer "},
+@swag_from(
+    {
+        "tags": ["UserInfo"],
+        "description": "Delete a user’s model and all associated files based on the model ID.",
+        "parameters": [
+            {
+                "name": "Authorization",
+                "in": "header",
+                "required": True,
+                "description": "Bearer token for authorization",
+                "schema": {"type": "string", "example": "Bearer "},
+            },
+            {
+                "name": "model_id",
+                "in": "path",
+                "type": "integer",
+                "required": True,
+                "description": "ID of the model to be deleted",
+            },
+        ],
+        "responses": {
+            200: {
+                "description": "Model and related files deleted successfully",
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "message": {
+                            "type": "string",
+                            "example": "Model deleted successfully",
+                        }
+                    },
+                },
+            },
+            404: {
+                "description": "User ID or model not found, or model does not belong to the user",
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "error": {"type": "string", "example": "User ID not found"}
+                    },
+                },
+            },
+            500: {
+                "description": "Internal server error during deletion",
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "error": {
+                            "type": "string",
+                            "example": "An error occurred while deleting the model",
+                        }
+                    },
+                },
+            },
         },
-        {
-            'name': 'model_id',
-            'in': 'path',
-            'type': 'integer',
-            'required': True,
-            'description': 'ID of the model to be deleted',
-        }
-    ],
-    'responses': {
-        200: {
-            'description': 'Model and related files deleted successfully',
-            'schema': {
-                'type': 'object',
-                'properties': {
-                    'message': {
-                        'type': 'string',
-                        'example': 'Model deleted successfully'
-                    }
-                }
-            }
-        },
-        404: {
-            'description': 'User ID or model not found, or model does not belong to the user',
-            'schema': {
-                'type': 'object',
-                'properties': {
-                    'error': {
-                        'type': 'string',
-                        'example': 'User ID not found'
-                    }
-                }
-            }
-        },
-        500: {
-            'description': 'Internal server error during deletion',
-            'schema': {
-                'type': 'object',
-                'properties': {
-                    'error': {
-                        'type': 'string',
-                        'example': 'An error occurred while deleting the model'
-                    }
-                }
-            }
-        }
     }
-})
+)
 def delete_model(model_id):
     current_email = get_jwt_identity()
-    user_id = User.get_user_by_email(current_email).id
+    user = User.get_user_by_email(current_email)
 
-    # 檢查使用者是否存在
-    if user_id is None:
-        return jsonify({"error": "User ID not found"}), 404
+    if user is None:
+        return jsonify(message="使用者不存在"), 404
 
     # 從資料庫中取得指定 model_id 的模型
-    model = TrainedModelRepo.find_trainedmodel_by_user_and_model_id(user_id=user_id, model_id=model_id)
+    model = TrainedModelRepo.find_trainedmodel_by_user_and_model_id(
+        user_id=user.id, model_id=model_id
+    )
 
     # 檢查模型是否存在
     if model is None:
         return jsonify({"error": "Model not found or does not belong to the user"}), 404
     try:
-        
         # 刪除該模型的訓練檔案
-        model_training_file = TrainingFileRepo.find_first_training_file_by_user_and_model_id(user_id, model_id)
-        if model_training_file:
-            file_path = os.path.join(TRAINING_FILE_DIRECTORY, model_training_file.filename)
+        model_training_file = (
+            TrainingFileRepo.find_first_training_file_by_user_and_model_id(
+                user.id, model_id
+            )
+        )
+        if model_training_file is not None:
+            file_path = os.path.join(
+                TRAINING_FILE_DIRECTORY, model_training_file.filename
+            )
             if os.path.exists(file_path):
                 os.remove(file_path)
-        # delete_trainingfile_success = TrainingFileRepo.delete_training_file_by_user_and_model_id(user_id=user_id, model_id=model_id)
-        TrainingFileRepo.delete_training_file_by_file_id(model_training_file.id)
-        
-        # if not delete_trainingfile_success:
-        #     return jsonify({"error": "Unable to delete training files from database"}), 500
-        
+            # delete_trainingfile_success = TrainingFileRepo.delete_training_file_by_user_and_model_id(user_id=user_id, model_id=model_id)
+            TrainingFileRepo.delete_training_file_by_file_id(model_training_file.id)
+
         # 刪除資料庫中的模型記錄
-        delete_model_success = TrainedModelRepo.delete_trainedmodel_by_user_and_model_id(user_id=user_id, model_id=model_id)
+        delete_model_success = (
+            TrainedModelRepo.delete_trainedmodel_by_user_and_model_id(
+                user_id=user.id, model_id=model_id
+            )
+        )
 
         if not delete_model_success:
             return jsonify({"error": "Unable to delete model from database"}), 500
-        
+
         # 刪除模型照片
-        photo_folder = os.path.join(FILE_DIRECTORY, str(user_id))
+        photo_folder = os.path.join(FILE_DIRECTORY, str(user.id))
         file_path = os.path.join(photo_folder, model.modelphoto)
         if os.path.exists(file_path):
             os.remove(file_path)
-                
+
     except Exception as e:
         print(f"Error deleting model or related files: {e}")
         return jsonify({"error": "An error occurred while deleting the model"}), 500
 
     return jsonify({"message": "Model deleted successfully"}), 200
-
