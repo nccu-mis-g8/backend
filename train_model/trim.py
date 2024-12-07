@@ -1,7 +1,10 @@
 import openai
 import os
 from typing import List
+from dotenv import load_dotenv
 
+
+load_dotenv(override=True)
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 def analyze_and_modify_response(input:str,response: str,chat_history_context:str,session_history:List[dict]) -> str:
