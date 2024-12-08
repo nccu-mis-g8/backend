@@ -5,6 +5,7 @@ import logging
 import json
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
+from main import app
 
 from models.trained_model import TrainedModel
 
@@ -199,25 +200,29 @@ def process_requests():
             ) = request_queue.get()
             print(f"Processing request {request_id}...")
 
-            # 執行模型推理
-            try:
-                responses = inference(model_dir, input_text, user_id, session_history)
-                if responses is None:
-                    result_store[request_id] = {
-                        "status": "error",
-                        "message": "Inference failed",
-                    }
-                else:
-                    result_store[request_id] = {
-                        "status": "success",
-                        "result": [
-                            {"input": input_text, "output": response}
-                            for response in responses
-                        ],
-                        "msg": f"成功取得{len(responses)}筆回答",
-                    }
-            except Exception as e:
-                result_store[request_id] = {"status": "error", "message": str(e)}
+            with app.app_context():
+                try:
+                    # 執行模型推理
+                    responses = inference(
+                        model_dir, input_text, user_id, session_history
+                    )
+                    if responses is None:
+                        result_store[request_id] = {
+                            "status": "error",
+                            "message": "Inference failed",
+                        }
+                    else:
+                        result_store[request_id] = {
+                            "status": "success",
+                            "result": [
+                                {"input": input_text, "output": response}
+                                for response in responses
+                            ],
+                            "msg": f"成功取得{len(responses)}筆回答",
+                        }
+                except Exception as e:
+                    result_store[request_id] = {"status": "error", "message": str(e)}
+
         finally:
             # 標記任務完成
             request_queue.task_done()
