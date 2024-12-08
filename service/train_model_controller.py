@@ -363,7 +363,8 @@ def chat():
     if not os.path.exists(model_dir):
         model_dir = BASE_MODEL_DIR
 
-    modelname = train_model.modelname
+    modelname = trained_model.model_original_name
+    print(modelname)
     input_text = request.form.get("input_text", "")
     if not input_text:
         return jsonify({"error": "Input text is required"}), 400

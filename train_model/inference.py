@@ -243,7 +243,7 @@ def inference(
                     )
 
                     generated_text = analyze_and_modify_response(
-                        input_text, generated_text, chat, session_history
+                        input_text, generated_text, modelname, chat, session_history
                     )
                     responses.append(generated_text)
 
