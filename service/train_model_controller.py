@@ -186,8 +186,25 @@ def start_train(
         train(id, training_file_id, model_dir, save_dir, data_path)
 
 
-request_queue = queue.Queue()
+# 最多存10個工作入排程
+request_queue = queue.Queue(maxsize=10)
 result_store = {}
+
+
+def clean_result_store():
+    while True:
+        time.sleep(3600)  # 每小時執行一次清理
+        now = time.time()
+        expired_keys = [
+            key
+            for key, value in result_store.items()
+            if now - float(key.split("_")[0]) > 3600  # 清理超過一小時的結果
+        ]
+        for key in expired_keys:
+            del result_store[key]
+
+
+threading.Thread(target=clean_result_store, daemon=True).start()
 
 
 def process_requests(app):
@@ -201,10 +218,8 @@ def process_requests(app):
                     user_id,
                     session_history,
                 ) = request_queue.get()
-                print(f"Processing request {request_id}...")
 
                 try:
-                    # 執行模型推理
                     responses = inference(
                         model_dir, input_text, user_id, session_history
                     )
@@ -225,8 +240,9 @@ def process_requests(app):
                 except Exception as e:
                     result_store[request_id] = {"status": "error", "message": str(e)}
 
+            except Exception as e:
+                logger.error(f"Error in process_requests: {str(e)}")
             finally:
-                # 標記任務完成
                 request_queue.task_done()
 
 
@@ -365,7 +381,10 @@ def chat():
     request_data = (request_id, model_dir, input_text, user.id, session_history)
 
     # 將請求放入隊列
-    request_queue.put(request_data)
+    try:
+        request_queue.put_nowait(request_data)
+    except queue.Full:
+        return jsonify({"error": "The server is busy. Please try again later."}), 429
 
     # 返回請求 ID 供用戶查詢
     return jsonify({"status": "queued", "request_id": request_id}), 200
@@ -373,7 +392,7 @@ def chat():
 
 @train_model_bp.get("/chat-result/<request_id>")
 def chat_result(request_id):
-    result = result_store.get(request_id)
+    result = result_store.pop(request_id, None)
     if result is None:
         return (
             jsonify({"status": "pending", "message": "Request is still processing"}),
