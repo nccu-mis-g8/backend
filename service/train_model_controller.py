@@ -224,10 +224,6 @@ def process_requests(app):
                 request_queue.task_done()
 
 
-app = current_app.app_context()
-threading.Thread(target=process_requests, daemon=True, args=(app,)).start()
-
-
 @train_model_bp.post("/chat")
 @jwt_required()
 @swag_from(

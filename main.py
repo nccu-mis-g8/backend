@@ -3,7 +3,7 @@ from flask_cors import CORS
 from extensions import db, jwt
 from service.auth_controller import auth_bp
 from service.utils_controller import utils_bp
-from service.train_model_controller import train_model_bp
+from service.train_model_controller import process_requests, train_model_bp
 from service.userinfo_controller import userinfo_bp
 from service.eventjournal_controller import event_bp
 from dotenv import load_dotenv
@@ -11,10 +11,13 @@ from flask_swagger_ui import get_swaggerui_blueprint
 from flasgger import Swagger
 
 from waitress import serve
+import threading
 
 load_dotenv()
 
 app = Flask(__name__)
+# 註冊inference的queue
+threading.Thread(target=process_requests, daemon=True, args=(app,)).start()
 app.config.from_prefixed_env()
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SWAGGER"] = {
