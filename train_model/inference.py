@@ -54,7 +54,7 @@ def load_model_for_user(model_dir: str, user_id: str):
 
     print(f"[INFO] Loading model for user_id: {user_id}")
     model = AutoModelForCausalLM.from_pretrained(model_dir)
-   
+
     adapter_config_path = os.path.join(model_dir, "adapter_config.json")
     if os.path.exists(adapter_config_path):
         if not hasattr(model, "peft_config"):
@@ -85,7 +85,12 @@ def limit_stickers(text: str) -> str:
 
 
 def inference(
-    model_dir: str, input_text: str, user_id: str, session_history:List[dict],max_retries: int = 3
+    model_dir: str,
+    modelname: str,
+    input_text: str,
+    user_id: str,
+    session_history: List[dict],
+    max_retries: int = 3,
 ) -> List[str] | None:
     try:
         greetings = [
@@ -167,7 +172,7 @@ def inference(
                         input_ids=inputs["input_ids"],
                         attention_mask=inputs["attention_mask"],
                         do_sample=True,
-                        # max_length=150, 
+                        # max_length=150,
                         max_new_tokens=50,
                         top_k=30,
                         top_p=0.85,
@@ -225,7 +230,7 @@ def inference(
                         "(null)",
                         "null",
                         "[貼文]",
-                        "[照片]"
+                        "[照片]",
                     ]
                     for tag in tags_to_remove:
                         generated_text = generated_text.replace(tag, "").strip()
@@ -237,9 +242,10 @@ def inference(
                         line for line in generated_text.splitlines() if line.strip()
                     )
 
-                    generated_text = analyze_and_modify_response(input_text,generated_text,chat,session_history)
+                    generated_text = analyze_and_modify_response(
+                        input_text, generated_text, chat, session_history
+                    )
                     responses.append(generated_text)
-
 
                     if any(responses):
                         return responses

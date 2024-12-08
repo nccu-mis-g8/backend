@@ -1,3 +1,4 @@
+from typing import Optional
 from flask import Blueprint, current_app, request, jsonify
 from flasgger import swag_from
 import logging
@@ -5,6 +6,7 @@ import json
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
 
+from models.trained_model import TrainedModel
 from models.user import User
 from repository.shared_model_repo import SharedModelRepo
 from repository.trainedmodel_repo import TrainedModelRepo
@@ -213,6 +215,7 @@ def process_requests(app):
                 (
                     request_id,
                     model_dir,
+                    modelname,
                     input_text,
                     user_id,
                     session_history,
@@ -220,7 +223,7 @@ def process_requests(app):
 
                 try:
                     responses = inference(
-                        model_dir, input_text, user_id, session_history
+                        model_dir, modelname, input_text, user_id, session_history
                     )
                     if responses is None:
                         result_store[request_id] = {
@@ -360,6 +363,7 @@ def chat():
     if not os.path.exists(model_dir):
         model_dir = BASE_MODEL_DIR
 
+    modelname = train_model.modelname
     input_text = request.form.get("input_text", "")
     if not input_text:
         return jsonify({"error": "Input text is required"}), 400
@@ -377,7 +381,14 @@ def chat():
 
     # 創建唯一的請求 ID
     request_id = f"{time.time()}_{user.id}"
-    request_data = (request_id, model_dir, input_text, user.id, session_history)
+    request_data = (
+        request_id,
+        model_dir,
+        modelname,
+        input_text,
+        user.id,
+        session_history,
+    )
 
     # 將請求放入隊列
     try:
