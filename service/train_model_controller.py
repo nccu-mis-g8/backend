@@ -19,6 +19,7 @@ import os
 import threading
 
 import queue
+import time
 
 
 train_model_bp = Blueprint("finetune", __name__)
@@ -288,7 +289,7 @@ threading.Thread(target=process_requests, daemon=True).start()
                 "description": "回應成功",
                 "examples": {
                     "application/json": {
-                        "res": "這是模型生成的回應",
+                        "request_id": "request_id",
                     }
                 },
             },
@@ -309,8 +310,6 @@ threading.Thread(target=process_requests, daemon=True).start()
         },
     }
 )
-@train_model_bp.post("/chat")
-@jwt_required()
 def chat():
     current_email = get_jwt_identity()
 
