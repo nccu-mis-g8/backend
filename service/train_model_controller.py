@@ -184,8 +184,8 @@ request_queue = queue.Queue()
 result_store = {}
 
 
-def process_requests():
-    with current_app.app_context():
+def process_requests(app):
+    with app:
         while True:
             try:
                 (
@@ -224,7 +224,8 @@ def process_requests():
                 request_queue.task_done()
 
 
-threading.Thread(target=process_requests, daemon=True).start()
+app = current_app.app_context()
+threading.Thread(target=process_requests, daemon=True, args=(app,)).start()
 
 
 @train_model_bp.post("/chat")
