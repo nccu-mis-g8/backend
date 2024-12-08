@@ -4,11 +4,10 @@ from flasgger import swag_from
 import logging
 import json
 from flask_jwt_extended import get_jwt_identity, jwt_required
-from werkzeug.wrappers import response
 
 
 from models.trained_model import TrainedModel
-from models.training_file import TrainingFile
+
 from models.user import User
 from repository.shared_model_repo import SharedModelRepo
 from repository.trainedmodel_repo import TrainedModelRepo
@@ -18,6 +17,8 @@ from train_model.finetune import BASE_MODEL_DIR, train
 from train_model.inference import inference
 import os
 import threading
+
+import queue
 
 
 train_model_bp = Blueprint("finetune", __name__)
@@ -181,6 +182,49 @@ def start_train(
         train(id, training_file_id, model_dir, save_dir, data_path)
 
 
+request_queue = queue.Queue()
+result_store = {}
+
+
+def process_requests():
+    while True:
+        try:
+            (
+                request_id,
+                model_dir,
+                input_text,
+                user_id,
+                session_history,
+            ) = request_queue.get()
+            print(f"Processing request {request_id}...")
+
+            # 執行模型推理
+            try:
+                responses = inference(model_dir, input_text, user_id, session_history)
+                if responses is None:
+                    result_store[request_id] = {
+                        "status": "error",
+                        "message": "Inference failed",
+                    }
+                else:
+                    result_store[request_id] = {
+                        "status": "success",
+                        "result": [
+                            {"input": input_text, "output": response}
+                            for response in responses
+                        ],
+                        "msg": f"成功取得{len(responses)}筆回答",
+                    }
+            except Exception as e:
+                result_store[request_id] = {"status": "error", "message": str(e)}
+        finally:
+            # 標記任務完成
+            request_queue.task_done()
+
+
+threading.Thread(target=process_requests, daemon=True).start()
+
+
 @train_model_bp.post("/chat")
 @jwt_required()
 @swag_from(
@@ -265,6 +309,8 @@ def start_train(
         },
     }
 )
+@train_model_bp.post("/chat")
+@jwt_required()
 def chat():
     current_email = get_jwt_identity()
 
@@ -274,39 +320,32 @@ def chat():
         return jsonify(message="使用者不存在"), 404
 
     user_id = user.id
-
     is_shared = request.form.get("is_shared")
     modelname = request.form.get("modelname")
     if not modelname:
         return jsonify({"error": "modelname is required"}), 400
-    # 取得模型
-    trained_model: Optional[TrainedModel] = None
-    if is_shared == "false":
-        trained_model = TrainedModelRepo.find_trainedmodel_by_user_and_modelname(
-            user_id=user_id, modelname=modelname
-        )
-    else:
-        trained_model = SharedModelRepo.find_trainedmodel_by_modelname_and_acquirer_id(
-            modelname=modelname, acquirer_id=user_id
-        )
 
+    # 取得模型
+    trained_model = (
+        TrainedModelRepo.find_trainedmodel_by_user_and_modelname(user_id, modelname)
+        if is_shared == "false"
+        else SharedModelRepo.find_trainedmodel_by_modelname_and_acquirer_id(
+            modelname, user_id
+        )
+    )
     if trained_model is None:
         return jsonify({"error": "未找到模型，請確認有模型訪問權限"}), 404
 
     model_dir = os.path.abspath(
         os.path.join("..", "saved_models", trained_model.modelname)
     )
-
     if not os.path.exists(model_dir):
-        # return jsonify({"error": "Model directory not found"}), 404
         model_dir = BASE_MODEL_DIR
 
     input_text = request.form.get("input_text", "")
-
     if not input_text:
         return jsonify({"error": "Input text is required"}), 400
 
-    # session_history
     history_json = request.form.get("session_history", "[]")
     try:
         session_history = json.loads(history_json)
@@ -318,27 +357,26 @@ def chat():
     except json.JSONDecodeError:
         return jsonify({"error": "Invalid session_history JSON"}), 400
 
-    try:
-        responses = inference(model_dir, input_text, user.id, session_history)
+    # 創建唯一的請求 ID
+    request_id = f"{time.time()}_{user.id}"
+    request_data = (request_id, model_dir, input_text, user.id, session_history)
 
-        if responses is None:
-            return jsonify({"error": "Inference failed"}), 500
+    # 將請求放入隊列
+    request_queue.put(request_data)
 
-        response_data = {
-            "result": [
-                {"input": input_text, "output": response} for response in responses
-            ],
-            "msg": f"成功取得{len(responses)}筆回答",
-        }
+    # 返回請求 ID 供用戶查詢
+    return jsonify({"status": "queued", "request_id": request_id}), 200
+
+
+@train_model_bp.get("/chat-result/<request_id>")
+def chat_result(request_id):
+    result = result_store.get(request_id)
+    if result is None:
         return (
-            Response(
-                json.dumps(response_data, ensure_ascii=False),
-                content_type="application/json; charset=utf-8",
-            ),
-            200,
+            jsonify({"status": "pending", "message": "Request is still processing"}),
+            202,
         )
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    return jsonify(result), 200
 
 
 @train_model_bp.post("/share-model")
