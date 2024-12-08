@@ -2,7 +2,6 @@ from flask import Blueprint, current_app, request, jsonify
 from flasgger import swag_from
 import logging
 import json
-from flask.app import Flask
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
 
