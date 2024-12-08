@@ -185,18 +185,18 @@ result_store = {}
 
 
 def process_requests():
-    while True:
-        try:
-            (
-                request_id,
-                model_dir,
-                input_text,
-                user_id,
-                session_history,
-            ) = request_queue.get()
-            print(f"Processing request {request_id}...")
+    with current_app.app_context():
+        while True:
+            try:
+                (
+                    request_id,
+                    model_dir,
+                    input_text,
+                    user_id,
+                    session_history,
+                ) = request_queue.get()
+                print(f"Processing request {request_id}...")
 
-            with current_app.app_context():
                 try:
                     # 執行模型推理
                     responses = inference(
@@ -219,9 +219,9 @@ def process_requests():
                 except Exception as e:
                     result_store[request_id] = {"status": "error", "message": str(e)}
 
-        finally:
-            # 標記任務完成
-            request_queue.task_done()
+            finally:
+                # 標記任務完成
+                request_queue.task_done()
 
 
 threading.Thread(target=process_requests, daemon=True).start()
