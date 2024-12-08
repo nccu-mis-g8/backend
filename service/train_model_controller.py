@@ -1,13 +1,9 @@
-from typing import Optional
-from flask import Blueprint, current_app, request, Response, jsonify
+from flask import Blueprint, current_app, request, jsonify
 from flasgger import swag_from
 import logging
 import json
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
-from main import app
-
-from models.trained_model import TrainedModel
 
 from models.user import User
 from repository.shared_model_repo import SharedModelRepo
@@ -200,7 +196,7 @@ def process_requests():
             ) = request_queue.get()
             print(f"Processing request {request_id}...")
 
-            with app.app_context():
+            with current_app.app_context():
                 try:
                     # 執行模型推理
                     responses = inference(
