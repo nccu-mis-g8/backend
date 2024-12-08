@@ -2,6 +2,7 @@ from flask import Blueprint, current_app, request, jsonify
 from flasgger import swag_from
 import logging
 import json
+from flask.app import Flask
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
 
@@ -174,9 +175,14 @@ def train_model():
 
 
 def start_train(
-    app, id: str, training_file_id: int, model_dir: str, save_dir: str, data_path: str
+    app_ctx,
+    id: str,
+    training_file_id: int,
+    model_dir: str,
+    save_dir: str,
+    data_path: str,
 ):
-    with app:
+    with app_ctx:
         train(id, training_file_id, model_dir, save_dir, data_path)
 
 
@@ -185,7 +191,7 @@ result_store = {}
 
 
 def process_requests(app):
-    with app:
+    with app.app_context():
         while True:
             try:
                 (
