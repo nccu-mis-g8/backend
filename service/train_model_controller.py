@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 from flask import Blueprint, current_app, request, jsonify
 from flasgger import swag_from
 import logging
@@ -19,6 +19,8 @@ import threading
 
 import queue
 import time
+
+from utils.chat_with_openai import get_response_from_openai
 
 
 train_model_bp = Blueprint("finetune", __name__)
@@ -214,18 +216,17 @@ def process_requests(app):
             try:
                 (
                     request_id,
-                    model_dir,
-                    modelname,
                     input_text,
                     user_id,
                     session_history,
                 ) = request_queue.get()
 
                 try:
-                    responses = inference(
-                        model_dir, modelname, input_text, user_id, session_history
+                    messages_template = generate_template_from_session_history(
+                        session_history
                     )
-                    if responses is None:
+                    response = get_response_from_openai(messages_template)
+                    if response is None:
                         result_store[request_id] = {
                             "status": "error",
                             "message": "Inference failed",
@@ -233,11 +234,8 @@ def process_requests(app):
                     else:
                         result_store[request_id] = {
                             "status": "success",
-                            "result": [
-                                {"input": input_text, "output": response}
-                                for response in responses
-                            ],
-                            "msg": f"成功取得{len(responses)}筆回答",
+                            "result": [{"input": input_text, "output": response}],
+                            "msg": "成功取得回答",
                         }
                 except Exception as e:
                     result_store[request_id] = {"status": "error", "message": str(e)}
@@ -246,6 +244,31 @@ def process_requests(app):
                 logger.error(f"Error in process_requests: {str(e)}")
             finally:
                 request_queue.task_done()
+
+
+# format: [{"user": "哈囉", "model": "哈囉"},{"user": "你起床了嗎", "model": "剛起來怎麼嘞"}]
+# TODO: 加入申請人上傳資料的功能
+applicant_info = """姓名: 王大明
+年齡: 30
+職業: 軟體工程師
+月收入: 70000新台幣
+申請貸款額度: 500000新台幣
+住家：台北市文山區保儀路129，和父母同住
+用途: 買車"""
+
+
+def generate_template_from_session_history(session_history: List[dict]):
+    messages = [
+        {"role": "system", "content": "你是一位專業且隱晦的貸款審核助手，專門設計問題以評估申請人的誠信。"},
+        {
+            "role": "user",
+            "content": f"申請人資訊如下：\n{applicant_info}\n請針對申請人的貸款資訊，逐步設計問題，每次對話中只問一個問題，並且不要自問自答。",
+        },
+    ]
+    for history in session_history:
+        messages.append({"role": "user", "content": history["user"]})
+        messages.append({"role": "assistant", "content": history["model"]})
+    return messages
 
 
 @train_model_bp.post("/chat")
@@ -341,30 +364,7 @@ def chat():
         return jsonify(message="使用者不存在"), 404
 
     user_id = user.id
-    is_shared = request.form.get("is_shared")
-    modelname = request.form.get("modelname")
-    if not modelname:
-        return jsonify({"error": "modelname is required"}), 400
 
-    # 取得模型
-    trained_model = (
-        TrainedModelRepo.find_trainedmodel_by_user_and_modelname(user_id, modelname)
-        if is_shared == "false"
-        else SharedModelRepo.find_trainedmodel_by_modelname_and_acquirer_id(
-            modelname, user_id
-        )
-    )
-    if trained_model is None:
-        return jsonify({"error": "未找到模型，請確認有模型訪問權限"}), 404
-
-    model_dir = os.path.abspath(
-        os.path.join("..", "saved_models", trained_model.modelname)
-    )
-    if not os.path.exists(model_dir):
-        model_dir = BASE_MODEL_DIR
-
-    modelname = trained_model.model_original_name
-    print(modelname)
     input_text = request.form.get("input_text", "")
     if not input_text:
         return jsonify({"error": "Input text is required"}), 400
@@ -381,11 +381,10 @@ def chat():
         return jsonify({"error": "Invalid session_history JSON"}), 400
 
     # 創建唯一的請求 ID
-    request_id = f"{time.time()}_{user.id}"
+    request_id = f"{time.time()}_{user_id}"
+
     request_data = (
         request_id,
-        model_dir,
-        modelname,
         input_text,
         user.id,
         session_history,
