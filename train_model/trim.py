@@ -7,7 +7,14 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-def analyze_and_modify_response(input:str,response: str,name: str,chat_history_context:str,session_history:List[dict]) -> str:
+
+def analyze_and_modify_response(
+    input: str,
+    response: str,
+    name: str,
+    chat_history_context: str,
+    session_history: List[dict],
+) -> str | None:
     prompt = (
         f"以下是用戶的歷史對話記錄，請模仿該用戶 output 的說話風格進行回應：\n"
         f"{chat_history_context}\n\n"
@@ -25,7 +32,7 @@ def analyze_and_modify_response(input:str,response: str,name: str,chat_history_c
     )
 
     try:
-        final_response = openai.ChatCompletion.create(
+        final_response = openai.chat.completions.create(
             model="gpt-4o",
             messages=[
                 {
@@ -40,9 +47,8 @@ def analyze_and_modify_response(input:str,response: str,name: str,chat_history_c
             temperature=0.8,
         )
 
-        return final_response["choices"][0]["message"]["content"]
+        return final_response.choices[0].message.content
 
-        
     except Exception as e:
         print(f"Error in inference API")
         return response
