@@ -247,14 +247,8 @@ def process_requests(app):
 
 
 # format: [{"user": "哈囉", "model": "哈囉"},{"user": "你起床了嗎", "model": "剛起來怎麼嘞"}]
-# TODO: 加入申請人上傳資料的功能
-applicant_info = """姓名: 王大明
-年齡: 30
-職業: 軟體工程師
-月收入: 70000新台幣
-申請貸款額度: 500000新台幣
-住家：台北市文山區保儀路129，和父母同住
-用途: 買車"""
+applicant_info = """
+姓名,年齡,手機號碼,職業,工作地點,收入,財務狀況,申請貸款額度,其他貸款繳款狀況,住家,同住人,房屋持有狀況,貸款用途,有無信用卡,信用卡繳款狀況,銀行來往情形"""
 
 
 def generate_template_from_session_history(session_history: List[dict]):
@@ -262,7 +256,7 @@ def generate_template_from_session_history(session_history: List[dict]):
         {"role": "system", "content": "你是一位專業且隱晦的貸款審核助手，專門設計問題以評估申請人的誠信。"},
         {
             "role": "user",
-            "content": f"申請人資訊如下：\n{applicant_info}\n請針對申請人的貸款資訊，逐步設計問題，每次對話中只問一個問題，並且不要自問自答。",
+            "content": f"請你逐步設計問題，問題針對以下資訊：\n{applicant_info}。每次對話中只問一個問題，並且不要自問自答。需特別注意盡量使用平易近人詞彙。",
         },
     ]
     for history in session_history:
