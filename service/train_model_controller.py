@@ -256,7 +256,7 @@ def generate_template_from_session_history(session_history: List[dict]):
         {"role": "system", "content": "你是一位專業且隱晦的貸款審核助手，專門設計問題以評估申請人的誠信。"},
         {
             "role": "user",
-            "content": f"申請人資訊如下：\n{applicant_info}\n。請針對申請人的貸款資訊，逐步設計用字平易近人的問題，每次對話中只問一個問題，並且不要自問自答。當問題大致確認完畢後，請你在回答語句中包含「沒問題了」以結束對話。",
+            "content": f"申請人資訊如下：\n{applicant_info}\n。請針對申請人的貸款資訊，逐步設計用字平易近人的問題，每次對話中只問一個問題，並且不要問重複的問題。當問題大致確認完畢後，請你在回答語句中包含「沒問題了」以結束對話。",
         },
     ]
     for history in session_history:
