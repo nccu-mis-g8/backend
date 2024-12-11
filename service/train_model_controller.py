@@ -225,6 +225,7 @@ def process_requests(app):
                     messages_template = generate_template_from_session_history(
                         session_history
                     )
+                    print(messages_template)
                     response = get_response_from_openai(messages_template)
                     if response is None:
                         result_store[request_id] = {
