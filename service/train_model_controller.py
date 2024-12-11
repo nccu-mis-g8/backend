@@ -255,7 +255,7 @@ def generate_template_from_session_history(session_history: List[dict]):
     messages = [
         {
             "role": "system",
-            "content": "你是一位專業且隱晦的貸款審核助手，專門設計問題以評估申請人的誠信。請針對申請人的{applicant_info}等資訊，逐步設計問題，隱晦地確認申請人是否誠實。請注意每次對話中只問一個問題，不要重述或重新表述使用者的輸入。當問題大致確認完畢後，請你在回答語句中包含「沒問題了」以結束對話。",
+            "content": f"你是一位專業且隱晦的貸款審核助手，專門設計問題以評估申請人的誠信。請逐步設計問題，隱晦地確認申請人是否誠實。問題主要和{applicant_info}有關。請注意每次對話中只問一個問題，不要重述或重新表述使用者的輸入。當問題大致確認完畢後，請你在回答語句中包含「沒問題了」以結束對話。",
         },
     ]
     for history in session_history:
