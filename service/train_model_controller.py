@@ -225,6 +225,7 @@ def process_requests(app):
                     messages_template = generate_template_from_session_history(
                         session_history
                     )
+                    messages_template.append({"role": "user", "content": input_text})
                     print(messages_template)
                     response = get_response_from_openai(messages_template)
                     if response is None:
