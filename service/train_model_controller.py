@@ -20,6 +20,7 @@ import threading
 import queue
 import time
 
+from utils import write_txt
 from utils.chat_with_openai import get_response_from_openai
 
 
@@ -222,8 +223,22 @@ def process_requests(app):
                 ) = request_queue.get()
 
                 try:
+                    system_content = (
+                        "你是一位專業且隱晦的貸款審核助手，我是貸款申請人。你將設計問題並由我的回答評估我的誠信。"
+                        "請基於取得以下目標資訊逐步設計問題："
+                        "姓名、年齡、手機號碼、職業、收入、財務狀況、申請貸款額度、其他貸款繳款狀況、住家地址、房屋持有狀況、貸款用途、信用卡使用狀況、銀行來往情形。"
+                        "請特別注意："
+                        "1. 每次只給我一個問題；"
+                        "2. 一定要問姓名、手機號碼；"
+                        "3. 根據我給出的問題回答，設計下一個問題。；"
+                        "4. 避免給我類似或意義相同的問題；"
+                        "5. 當收集到6個目標資訊時，說『沒問題了』結束對話；"
+                        "6. 問題一定要和上述目標資訊有關。"
+                    )
+
                     messages_template = generate_template_from_session_history(
-                        session_history
+                        system_content,
+                        session_history,
                     )
                     messages_template.append({"role": "user", "content": input_text})
                     print(messages_template)
@@ -251,28 +266,84 @@ def process_requests(app):
 # format: [{"user": "哈囉", "model": "哈囉"},{"user": "你起床了嗎", "model": "剛起來怎麼嘞"}]
 
 
-def generate_template_from_session_history(session_history: List[dict]):
+def generate_template_from_session_history(
+    system_content: str, session_history: List[dict]
+):
     messages = [
-        {
-            "role": "system",
-            "content": (
-                "你是一位專業且隱晦的貸款審核助手，我是貸款申請人。你將設計問題並由我的回答評估我的誠信。"
-                "請基於取得以下目標資訊逐步設計問題："
-                "姓名、年齡、手機號碼、職業、收入、財務狀況、申請貸款額度、其他貸款繳款狀況、住家地址、房屋持有狀況、貸款用途、信用卡使用狀況、銀行來往情形。"
-                "請特別注意："
-                "1. 每次只給我一個問題；"
-                "2. 一定要問姓名、手機號碼；"
-                "3. 根據我給出的問題回答，設計下一個問題。；"
-                "4. 避免給我類似或意義相同的問題；"
-                "5. 當收集到6個目標資訊時，說『沒問題了』結束對話；"
-                "6. 問題一定要和上述目標資訊有關。"
-            ),
-        },
+        {"role": "system", "content": system_content},
     ]
     for history in session_history:
         messages.append({"role": "user", "content": history["user"]})
         messages.append({"role": "assistant", "content": history["model"]})
     return messages
+
+
+def history_to_dialog(data) -> str:
+    for item in data:
+        if "user" in item:
+            item["貸款申請人"] = item.pop("user")  # 把 'user' 換成 '貸款申請人'
+        if "model" in item:
+            item["徵審人員"] = item.pop("model")  # 把 'model' 換成 '徵審人員'
+
+    data_str = json.dumps(data, ensure_ascii=False)  # 確保中文不會變成 Unicode 編碼
+
+    # 移除方括號[] 和大括號{}
+    data_str = data_str[1:-1]  # 去掉最外層的方括號 []
+    data_str = data_str.replace("},", "}\n").replace("{", "").replace("}", "")
+    return data_str
+
+
+@train_model_bp.post("/create-trust-report")
+@jwt_required()
+def generate_trust_report():
+    current_email = get_jwt_identity()
+
+    # 從資料庫中查詢使用者
+    user = User.get_user_by_email(current_email)
+    if user is None:
+        return jsonify(message="使用者不存在"), 404
+
+    user_id = user.id
+
+    history_json = request.form.get("session_history", "[]")
+    try:
+        session_history = json.loads(history_json)
+        if not isinstance(session_history, list):
+            return (
+                jsonify({"error": "Invalid session_history format. Must be a list."}),
+                400,
+            )
+    except json.JSONDecodeError:
+        return jsonify({"error": "Invalid session_history JSON"}), 400
+    dialog = history_to_dialog(session_history)
+    msg_template = [
+        {"role": "system", "content": "你是一位專業的貸款審核助手"},
+        {
+            "role": "user",
+            "content": f"以下是貸款申請人和徵審人員的對話：{dialog}。"
+            "請根據對話內容評估貸款申請人的信用等級和還款能力，並生成報告。"
+            "請注意你的回答須符合以下格式：申請人姓名：[]\n手機號碼：[]\n是否核淮貸款：[]\n理由：[]，並將[]換成你的答案。",
+        },
+    ]
+    file_directory = "..\\trust_report"
+    if not os.path.exists(file_directory):
+        os.makedirs(file_directory)
+    response = get_response_from_openai(msg_template)
+    filename = f"{time.time()}_{user_id}.txt"
+    filename = os.path.join(file_directory, filename)
+    try:
+        write_txt.write_to_txt(filename, response)
+        return (
+            jsonify(
+                {
+                    "message": "successfully save report.",
+                }
+            ),
+            200,
+        )
+    except Exception as e:
+        logger.error(f"Error in process_requests: {str(e)}")
+        return jsonify({"status": "Error", "message": str(e)}), 500
 
 
 @train_model_bp.post("/chat")
