@@ -241,7 +241,7 @@ def process_requests(app):
                         session_history,
                     )
                     messages_template.append({"role": "user", "content": input_text})
-                    print(messages_template)
+                    # print(messages_template)
                     response = get_response_from_openai(messages_template)
                     if response is None:
                         result_store[request_id] = {
