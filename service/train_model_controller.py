@@ -233,7 +233,7 @@ def process_requests(app):
                         "3. 根據我給出的問題回答，設計下一個問題。；"
                         "4. 避免給我類似或意義相同的問題；"
                         "5. 當收集到6個目標資訊時，說『沒問題了』結束對話；"
-                        "6. 問題一定要和上述目標資訊有關。"
+                        "6. 你可以詢問額外的問題，隱晦地確認申請人提供的資訊正確性。"
                     )
 
                     messages_template = generate_template_from_session_history(
